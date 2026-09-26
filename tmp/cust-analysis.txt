@@ -1,0 +1,90 @@
+== WORDS BY LINE ==
+y=  26 x=  45-1603 h=32  | Your Bite ® veg ® Non-Veg
+y=  40 x= 330- 443 h=8  | Foc Mo
+y= 111 x= 386- 536 h=43  | Popular
+y= 126 x=  97- 669 h=7  | Rh "=
+y= 183 x=  46-1565 h=10  | & starters B * Best Seller . * Best Seller .
+y= 197 x= 989-1007 h=14  | so
+y= 212 x= 407-1267 h=17  | French Fries <7 7 AT Chicken Wings
+y= 233 x= 407-1397 h=28  | Crispy golden fries with house seasoning Glazed wings tossed in spicy peri-peri sauce.
+y= 248 x=  45-1753 h=19  | A Main Course 6 I CHE RE:
+y= 268 x=1654-1712 h=11  | Hoe
+y= 285 x=1119-1655 h=2  | 3260 3
+y= 307 x=  46- 295 h=24  | A Pizza s
+y= 358 x=  42-1715 h=27  | oa Burgers Paneer Butter Masala ® Veg Biryani O age
+y= 374 x=  46-1761 h=31  | = 4 Po = a ™\
+y= 388 x= 600-1647 h=21  | Cottage cheese simmered in rich tomato Fragrant basmati ice layered with spiced Wo
+y= 407 x= 429-1671 h=21  | Seep butter gravy. vegetables 905
+y= 422 x=1697-1699 h=5  | 3
+y= 450 x= 601-1710 h=7  | 2280 2220 + 2
+y= 490 x=  46- 295 h=24  | £8 Desserts 4
+y= 522 x= 538-1565 h=28  | NS Butter Chicken O Paneer Pizza O
+y= 538 x= 448- 537 h=8  | AS pos
+y= 546 x= 489-1236 h=29  | g Classic tomato with tender chicken. Hand-tossed pizza
+y= 560 x= 649-1439 h=11  | creamy curry with paneer, peppers and onior
+y= 605 x= 601-1164 h=7  | 3340 = 3280
+y= 657 x= 198- 236 h=40  | ped”
+y= 674 x= 220-1694 h=11  | for Margherita Pizza O Veg Burger —
+y= 691 x= 181-1670 h=15  | i lettuce &
+y= 711 x= 601-1411 h=13  | Classic mozzarella, tomato and basil. Crunchy veg patty with and house sauce.
+y= 746 x=1002-1027 h=11  | Add
+y= 815 x=  45-  65 h=23  | fy
+
+== IMAGE ANALYSIS ==
+size: 1829 x 860
+dominant: #fbf7f2x20928 #faf5eex19001 #faf5efx15757 #fcf8f3x14350 #faf4eex13621 #f9f4eex9789 #fbf7f1x8949 #fbf5efx6789 #f9f4edx6674 #fcf8f2x6618 #f7f0e8x6007 #fdf9f4x5853 #fcf7f2x5491 #fbf8f3x4663 #f7f0e7x4587
+saturated: #cd5e45x66 #ce5e45x56 #ce5f46x53 #ce6046x51 #cd5d44x50 #cf6147x49 #ce6047x46 #cf6046x45 #ce5f45x44 #cf5f45x41 #cf6047x40 #cd5e44x37 #cc5d45x36 #d0674dx35 #cd5f45x35 #cd5d45x35 #cf6148x34 #cd5f46x34 #ce5e46x33 #cc5b43x33
+probe bg top-left: #faf5ef
+probe sidebar-mid: #faf4ed
+probe sidebar-mid2: #f9f4ed
+probe header-right(1700,40): #516059
+probe header(1000,30): #faf4ee
+probe content-bg(900,700): #fcf7f2
+probe content-bg(1800,800): #f7f0e8
+probe mid(900,300): #bb7845
+row400 change x=398: #f1eeea -> #fffefd
+row400 change x=399: #fffefd -> #7b7e7c
+row400 change x=400: #7b7e7c -> #121513
+row400 change x=401: #121513 -> #262521
+row400 change x=413: #36322d -> #221a13
+row400 change x=414: #221a13 -> #615d5b
+row400 change x=415: #615d5b -> #b9b9ba
+row400 change x=416: #b9b9ba -> #423c34
+row400 change x=417: #423c34 -> #381d0a
+row400 change x=418: #381d0a -> #60320d
+row400 change x=428: #391906 -> #180701
+row400 change x=442: #d55900 -> #d26e1a
+row400 change x=443: #d26e1a -> #eac38f
+row400 change x=444: #eac38f -> #f8e8c9
+row400 change x=445: #f8e8c9 -> #e9b87b
+row400 change x=446: #e9b87b -> #d46f05
+row400 change x=458: #df7912 -> #d89153
+row400 change x=459: #d89153 -> #e2c1a5
+row400 change x=460: #e2c1a5 -> #f6ebe0
+row400 change x=461: #f6ebe0 -> #edcba5
+row400 change x=462: #edcba5 -> #d06a15
+row400 change x=464: #d65800 -> #e97109
+row400 change x=472: #e8710d -> #ecb375
+row400 change x=473: #ecb375 -> #f7e5cb
+row400 change x=474: #f7e5cb -> #edb98f
+row400 change x=475: #edb98f -> #e28133
+row400 change x=477: #e59549 -> #f8ca88
+row400 change x=479: #fdc774 -> #fab155
+row400 change x=482: #f3b25e -> #f19741
+row400 change x=487: #fba431 -> #cf5b0c
+row400 change x=488: #cf5b0c -> #932603
+white runs y=400 (content): []
+white runs y=250: []
+white runs y=650: []
+white runs y=150: []
+white runs y=820: []
+white runs x=420: []
+white runs x=700: []
+white runs x=1000: []
+white runs x=1400: []
+white runs x=1750: []
+row y=100 white(0..340): []
+row y=200 white(0..340): []
+row y=300 white(0..340): []
+row y=500 white(0..340): []
+row y=700 white(0..340): []

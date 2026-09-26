@@ -1,0 +1,191 @@
+/* Your Bite customer review ribbon */
+.yourbite-page {
+  min-height: 100vh;
+  background: #f8f5ef;
+  color: #2b251f;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  overflow-x: hidden;
+}
+
+.yourbite-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  height: 103px;
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  background: rgba(248, 245, 239, 0.96);
+  border-bottom: 1px solid #e7dfd4;
+  box-shadow: 0 2px 10px rgba(76, 59, 39, 0.04);
+  backdrop-filter: blur(12px);
+}
+
+.yourbite-brand {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 250px;
+}
+
+.yourbite-brand-mark {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #eadfce;
+  border-radius: 12px;
+  background: #fffdf9;
+  color: #c95e42;
+  box-shadow: 0 3px 10px rgba(78, 53, 31, 0.06);
+}
+
+.yourbite-brand-copy {
+  padding-left: 20px;
+  border-left: 1px solid #ddd2c4;
+}
+
+.yourbite-brand h1 {
+  margin: 0;
+  color: #27201a;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 38px;
+  font-weight: 700;
+  letter-spacing: -1.7px;
+  line-height: 1;
+}
+
+.yourbite-brand-tag {
+  margin: 5px 0 0;
+  color: #8d8175;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.yourbite-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.yourbite-search {
+  width: 330px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 18px;
+  border: 1px solid #e6ddd0;
+  border-radius: 999px;
+  background: #fffdf9;
+  color: #9d9184;
+  box-shadow: 0 3px 12px rgba(76, 59, 39, 0.04);
+}
+
+.yourbite-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #4e463e;
+  font: inherit;
+  font-size: 15px;
+}
+
+.yourbite-search input::placeholder {
+  color: #a3988d;
+}
+
+.yourbite-search-clear {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #f1e9df;
+  color: #897e72;
+  cursor: pointer;
+}
+
+.yourbite-search-clear:hover {
+  background: #e9dfd3;
+}
+
+.yourbite-diet {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.yourbite-diet button {
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 17px;
+  border: 1px solid #e5dcd0;
+  border-radius: 999px;
+  background: #fffdf9;
+  color: #6e655c;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.yourbite-diet button:hover {
+  border-color: #d8c9b7;
+  color: #4f463e;
+}
+
+.yourbite-diet button.active {
+  border-color: #e96b4f;
+  background: #fff2ea;
+  color: #b54c34;
+  box-shadow: 0 3px 10px rgba(201, 94, 66, 0.08);
+}
+
+.yourbite-diet-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #2c9b5b;
+  box-shadow: 0 0 0 3px #eaf5ed;
+}
+
+.yourbite-diet-dot.nonveg {
+  background: #d35c48;
+  box-shadow: 0 0 0 3px #faeae5;
+}
+
+.yourbite-table-button {
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: #263d38;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(38, 61, 56, 0.16);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.yourbite-table-button:hover {
+  background: #1d302c;
+  transform: translateY(-1px);
+}

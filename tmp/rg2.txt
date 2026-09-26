@@ -1,0 +1,23 @@
+
+### r1c1right @ (690,165) 394x165
+ y=187 x=845-854 | [J
+ y=228 x=1008-1024 | 2 |
+ y=242 x=890-1028 | I E
+ y=250 x=986-1010 | a
+ y=258 x=880-1021 | I A
+
+### r1c1left @ (390,165) 330x165
+ y=183 x=434-492 | Best Seller
+ y=212 x=407-531 | French Fries
+ y=240 x=407-677 | Crispy golden fries with house seasoning
+ y=260 x=407-459 | and dip.
+ y=291 x=407-453 | 160
+
+### r2c1right @ (940,336) 144x160
+ y=359 x=1048-1054 | [
+
+### r1c2left @ (1100,165) 370x165
+ y=183 x=1146-1204 | Best Seller
+ y=213 x=1119-1267 | Chicken Wings
+ y=242 x=1119-1400 | Glazed wings tossed in spicy peri-peri sauce.
+ y=288 x=1119-1164 | 3260

@@ -1,0 +1,2 @@
+keys: text,hocr,tsv,box,unlv,osd,pdf,imageColor,imageGrey,imageBinary,confidence,blocks,layoutBlocks,psm,oem,version,debug,rotateRadians
+blocks type: array:1

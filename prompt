@@ -1,0 +1,1555 @@
+# IMPLEMENTATION ORDER — STOP CURRENT DIRECTION AND BUILD THIS PRODUCT
+
+You are working on an existing project, but the current implementation has gone in the wrong direction.
+
+**Do not continue building the current product direction blindly.**
+
+You must first inspect the existing project and then restructure/modify it according to the exact product specification below.
+
+The goal right now is to build the **complete frontend UI and functional prototype**.
+
+## TECHNOLOGY REQUIREMENT
+
+### Frontend
+
+Use:
+
+* React.js
+* JSX
+* React Router where needed
+* Modern CSS / existing styling system if already present
+* Responsive design
+
+Do NOT introduce:
+
+* Next.js
+* TypeScript
+* React Native
+
+Keep the implementation straightforward and maintainable.
+
+### Backend
+
+Backend is optional at this stage.
+
+If backend functionality is useful, use:
+
+* Node.js
+* Express.js
+
+However:
+
+**DO NOT add a real database yet.**
+
+Database integration will be provided/decided later.
+
+Use temporary/mock data, in-memory state, or local persistence where appropriate.
+
+The architecture must make it easy to replace mock data with a real database later.
+
+---
+
+# 1. PRODUCT WE ARE BUILDING
+
+This is a:
+
+# Cafe / Restaurant Management + QR Ordering System
+
+The core flow is:
+
+**Cafe Owner**
+
+→ Create Tables
+→ Generate QR for each Table
+→ Create/Edit Central Menu
+→ Customer scans Table QR
+→ Customer sees Menu
+→ Customer places Order
+→ Owner sees Order + Table Number
+→ Owner manages Order
+→ Owner sees Table Bill
+→ Owner updates Payment Status
+→ Sales/Analytics update
+
+Build the UI around this exact workflow.
+
+---
+
+# 2. IMPORTANT — DO NOT MAKE A SEPARATE MENU FOR EVERY TABLE
+
+There should be:
+
+## ONE CENTRAL MENU
+
+The cafe owner creates one menu.
+
+For example:
+
+### Beverages
+
+Cold Coffee — ₹120
+Cappuccino — ₹150
+
+### Food
+
+Paneer Pizza — ₹280
+French Fries — ₹160
+
+This menu is common to all tables.
+
+However:
+
+**Each table gets its own QR code.**
+
+The QR identifies the table.
+
+Therefore:
+
+Table 01 QR
+→ opens the central menu
+→ but system knows customer came from Table 01.
+
+Table 02 QR
+→ opens the same central menu
+→ but system knows customer came from Table 02.
+
+This distinction is extremely important.
+
+Do NOT duplicate the menu for every table.
+
+---
+
+# 3. BUILD THE ADMIN DASHBOARD
+
+Create a professional cafe owner dashboard.
+
+Suggested sidebar:
+
+* Dashboard
+* Tables
+* Menu
+* Orders
+* Billing
+* Analytics
+* Settings
+
+The UI should feel like a real SaaS restaurant-management application.
+
+Do not make it look like a generic AI-generated dashboard.
+
+---
+
+# 4. DASHBOARD HOME
+
+Create a dashboard overview page.
+
+Display cards such as:
+
+### Today's Sales
+
+₹24,580
+
+### Orders Today
+
+82
+
+### Active Tables
+
+8 / 20
+
+### Pending Orders
+
+6
+
+### Pending Payments
+
+3
+
+Then show sections such as:
+
+### Recent Orders
+
+Order ID
+Table
+Items
+Amount
+Status
+Payment
+
+Example:
+
+#1042 | Table 07 | 3 items | ₹480 | Preparing | Pending
+
+---
+
+### Active Tables
+
+Table 01 — Available
+
+Table 02 — Occupied
+
+Table 03 — Payment Pending
+
+Table 04 — Available
+
+Use clear status indicators.
+
+---
+
+### Top Selling Items
+
+Cold Coffee — 42 orders
+
+Paneer Pizza — 31 orders
+
+French Fries — 26 orders
+
+For now these can use mock data.
+
+Later they will come from the database.
+
+---
+
+# 5. TABLE MANAGEMENT PAGE
+
+Create:
+
+## Tables
+
+The owner should be able to visually manage cafe tables.
+
+Example:
+
+Table 01
+Available
+
+Table 02
+Occupied
+
+Table 03
+Payment Pending
+
+Table 04
+Available
+
+Provide:
+
+### Add Table
+
+Fields:
+
+* Table Number/Name
+
+After creating a table:
+
+* Show table card
+* Show status
+* Generate QR
+* View QR
+* Download QR
+* Print QR
+* Edit
+* Delete/deactivate
+
+---
+
+# 6. QR CODE UI
+
+Each table must have a unique QR.
+
+Example:
+
+## Table 07
+
+Status:
+
+Occupied
+
+QR:
+
+[QR CODE]
+
+Actions:
+
+**View QR**
+
+**Download**
+
+**Print**
+
+The QR should contain a table-specific route/token.
+
+For example:
+
+`/menu/table/7`
+
+or a more appropriate route.
+
+For now it can be frontend-generated.
+
+Later the backend/database can replace this with a secure token.
+
+---
+
+# 7. TABLE QR EXPERIENCE
+
+When the user opens:
+
+`/menu/table/7`
+
+the customer-facing menu should open.
+
+The application should know:
+
+**Current Table: 07**
+
+Show something like:
+
+> You're ordering from Table 07
+
+This is important because the eventual backend will associate the order with this table.
+
+---
+
+# 8. CUSTOMER MENU
+
+Build a completely separate customer-facing UI.
+
+This should NOT look like the admin dashboard.
+
+It should be:
+
+* Mobile-first
+* Clean
+* Fast
+* Restaurant-style
+* Easy to browse
+
+Example:
+
+---
+
+### THE SOCIAL CAFE
+
+**Table 07**
+
+[Search Menu]
+
+Categories:
+
+All | Starters | Main Course | Pizza | Drinks | Desserts
+
+---
+
+### Popular
+
+Cold Coffee
+
+₹120
+
+[Add]
+
+---
+
+Paneer Pizza
+
+₹280
+
+[Add]
+
+---
+
+French Fries
+
+₹160
+
+[Add]
+
+---
+
+# 9. MENU MANAGEMENT
+
+Admin sidebar:
+
+**Menu**
+
+Create a complete menu-management interface.
+
+Allow owner to manage:
+
+### Categories
+
+* Add category
+* Edit category
+* Delete category
+* Reorder category
+
+### Items
+
+* Add item
+* Edit item
+* Delete item
+* Enable/disable item
+* Change price
+* Change category
+* Add description
+* Add image
+* Mark bestseller
+
+---
+
+# 10. MENU ITEM FORM
+
+Create a proper form.
+
+Fields:
+
+### Item Name
+
+### Description
+
+### Category
+
+### Price
+
+### Image
+
+### Veg / Non-Veg
+
+### Available
+
+### Bestseller
+
+Buttons:
+
+**Save Item**
+
+**Cancel**
+
+Since there is no database yet, save to local/mock state.
+
+If localStorage is used, structure it cleanly so it can later be replaced by API calls.
+
+---
+
+# 11. MENU DASHBOARD
+
+Show menu items in a useful table/grid.
+
+Example:
+
+| Item        | Category | Price | Availability | Bestseller | Actions |
+| ----------- | -------- | ----: | ------------ | ---------- | ------- |
+| Cold Coffee | Drinks   |  ₹120 | Available    | Yes        | Edit    |
+| Pizza       | Main     |  ₹280 | Available    | No         | Edit    |
+| Fries       | Starters |  ₹160 | Unavailable  | No         | Edit    |
+
+Include search and category filters.
+
+---
+
+# 12. CUSTOMER CART
+
+When customer clicks:
+
+**Add**
+
+item goes into cart.
+
+Cart should show:
+
+Cold Coffee × 2
+₹240
+
+Paneer Pizza × 1
+₹280
+
+Subtotal:
+
+₹520
+
+Then:
+
+**Place Order**
+
+Quantity controls:
+
+− 1 +
+
+---
+
+# 13. PLACE ORDER FLOW
+
+When customer clicks Place Order:
+
+Show confirmation.
+
+Example:
+
+## Confirm Order
+
+Table 07
+
+Cold Coffee × 2
+Paneer Pizza × 1
+
+Total:
+
+₹520
+
+Button:
+
+**Confirm Order**
+
+After confirmation:
+
+Show:
+
+# Order Placed Successfully
+
+Order:
+
+#1042
+
+Table:
+
+07
+
+Total:
+
+₹520
+
+Status:
+
+Order Received
+
+---
+
+# 14. OWNER ORDERS PAGE
+
+Create:
+
+# Orders
+
+Use tabs/filters:
+
+* New
+* Preparing
+* Ready
+* Served
+* Completed
+* Cancelled
+
+Each order card/table should show:
+
+### Order #1042
+
+**Table 07**
+
+2 × Cold Coffee
+
+1 × Paneer Pizza
+
+Total:
+
+₹520
+
+Status:
+
+Preparing
+
+Payment:
+
+Pending
+
+Actions:
+
+**Accept**
+
+**Preparing**
+
+**Ready**
+
+**Served**
+
+**Complete**
+
+Use appropriate actions depending on current state.
+
+---
+
+# 15. TABLE NUMBER MUST ALWAYS BE VISIBLE
+
+This is a critical requirement.
+
+When owner receives:
+
+Order #1042
+
+the owner must immediately know:
+
+# TABLE 07
+
+Do not hide table number inside a secondary detail screen.
+
+---
+
+# 16. MULTIPLE ORDERS FROM ONE TABLE
+
+The prototype must support:
+
+Table 07
+
+Order #1042 — ₹520
+
+Order #1045 — ₹180
+
+Order #1048 — ₹320
+
+The system should not overwrite previous orders.
+
+Use mock/in-memory/localStorage data to demonstrate this.
+
+---
+
+# 17. ACTIVE TABLE BILL
+
+Create:
+
+# Billing
+
+Owner can select a table.
+
+Example:
+
+### Table 07
+
+Active Orders:
+
+#1042 — ₹520
+
+#1045 — ₹180
+
+#1048 — ₹320
+
+Subtotal:
+
+₹1,020
+
+Tax:
+
+₹0 / mock
+
+Discount:
+
+₹0
+
+Grand Total:
+
+₹1,020
+
+Payment:
+
+**Pending**
+
+---
+
+# 18. PAYMENT STATUS
+
+No payment gateway is required.
+
+Create UI for:
+
+### Payment Status
+
+* Pending
+* Paid
+* Failed
+
+Payment Method:
+
+* Cash
+* UPI
+* Card
+* Other
+
+Example:
+
+Payment:
+
+Pending
+
+[Mark as Paid]
+
+After clicking:
+
+Payment:
+
+**Paid**
+
+Method:
+
+UPI
+
+The UI should update immediately.
+
+---
+
+# 19. TABLE LIFECYCLE
+
+Implement a simple table lifecycle in the prototype:
+
+Available
+
+↓
+
+Customer scans QR
+
+↓
+
+Ordering / Occupied
+
+↓
+
+Order placed
+
+↓
+
+Served
+
+↓
+
+Payment Pending
+
+↓
+
+Paid
+
+↓
+
+Available
+
+The exact backend implementation will come later.
+
+For now, demonstrate this workflow using frontend state/mock data.
+
+---
+
+# 20. BILL COMPLETION
+
+When owner marks the table bill as paid:
+
+Show:
+
+### Payment Successful
+
+Table:
+
+07
+
+Amount:
+
+₹1,020
+
+Method:
+
+UPI
+
+Then:
+
+Table 07
+
+Status:
+
+**Available**
+
+This should be reflected on the Tables page and Dashboard.
+
+---
+
+# 21. ANALYTICS PAGE
+
+Create:
+
+# Analytics
+
+Use mock data for now.
+
+The UI should support:
+
+### Sales
+
+Today's Sales
+
+₹24,580
+
+This Week
+
+₹1,52,400
+
+This Month
+
+₹5,84,200
+
+---
+
+# 22. TOP SELLING PRODUCTS
+
+Create a chart/table.
+
+Example:
+
+### Top Selling
+
+1. Cold Coffee — 124 orders
+2. Paneer Pizza — 98 orders
+3. French Fries — 83 orders
+4. Veg Burger — 71 orders
+
+Do not hardcode this permanently into components.
+
+Keep mock data in a separate data/service layer so it can later be replaced with API/database data.
+
+---
+
+# 23. LOW-SELLING PRODUCTS
+
+Create:
+
+### Low Selling Items
+
+Item | Orders
+
+Item A | 2
+
+Item B | 1
+
+Item C | 0
+
+This is informational only.
+
+---
+
+# 24. SALES BY CATEGORY
+
+Create a visualization for:
+
+Beverages
+
+₹18,200
+
+Pizza
+
+₹24,500
+
+Burgers
+
+₹12,400
+
+Desserts
+
+₹8,300
+
+A chart is preferred.
+
+If adding a chart library, keep it lightweight and compatible with React.
+
+---
+
+# 25. DATE FILTERS
+
+Analytics UI should have:
+
+* Today
+* Yesterday
+* Last 7 Days
+* Last 30 Days
+* Custom
+
+For now, the data can be mock data.
+
+The interface must be ready for real API data later.
+
+---
+
+# 26. ORDER HISTORY
+
+Create:
+
+# Order History
+
+Columns:
+
+Order ID
+Table
+Items
+Total
+Date
+Status
+Payment
+
+Add:
+
+* Search
+* Date filter
+* Table filter
+* Status filter
+* Payment filter
+
+---
+
+# 27. KITCHEN VIEW
+
+Add a simple:
+
+# Kitchen / KOT
+
+page.
+
+Show:
+
+### New
+
+Order #1042
+
+Table 07
+
+2 × Cold Coffee
+
+1 × Paneer Pizza
+
+[Start Preparing]
+
+---
+
+### Preparing
+
+Order #1040
+
+Table 04
+
+1 × Burger
+
+[Mark Ready]
+
+---
+
+### Ready
+
+Order #1038
+
+Table 02
+
+2 × Fries
+
+[Mark Served]
+
+This is optional compared to the core modules, but implement it if practical.
+
+---
+
+# 28. CUSTOMER ORDER TRACKING
+
+After placing an order, customer should be able to see:
+
+# Order #1042
+
+Table 07
+
+✓ Order Received
+
+✓ Preparing
+
+○ Ready
+
+○ Served
+
+Use mock state for now.
+
+---
+
+# 29. ORDER NOTES
+
+Allow customer to optionally enter:
+
+### Special Instructions
+
+Example:
+
+"Less spicy"
+
+"No onion"
+
+"Extra cheese"
+
+Attach the note to the order/item in the frontend model.
+
+---
+
+# 30. ROUTING
+
+Create sensible routes.
+
+Example:
+
+## Admin
+
+`/admin`
+
+`/admin/tables`
+
+`/admin/menu`
+
+`/admin/orders`
+
+`/admin/billing`
+
+`/admin/analytics`
+
+`/admin/kitchen`
+
+`/admin/settings`
+
+## Customer
+
+`/menu/table/:tableId`
+
+`/menu/table/:tableId/cart`
+
+`/menu/order/:orderId`
+
+These exact routes can be adjusted to fit the existing project.
+
+---
+
+# 31. COMPONENT ARCHITECTURE
+
+Do not put everything inside one giant React component.
+
+Create reusable components.
+
+Example:
+
+```text
+src/
+  components/
+    layout/
+    dashboard/
+    tables/
+    menu/
+    orders/
+    billing/
+    analytics/
+    customer/
+    common/
+
+  pages/
+    admin/
+    customer/
+
+  data/
+    mockTables.js
+    mockMenu.js
+    mockOrders.js
+    mockAnalytics.js
+
+  services/
+    api.js
+
+  utils/
+
+  routes/
+
+  App.jsx
+```
+
+Adapt this to the existing project structure rather than blindly replacing it.
+
+---
+
+# 32. DATA ARCHITECTURE
+
+Because there is NO DATABASE right now:
+
+Create a temporary data layer.
+
+For example:
+
+```text
+mockTables
+mockMenu
+mockOrders
+mockCategories
+mockAnalytics
+```
+
+The UI should consume these through services/state rather than scattering hardcoded objects throughout components.
+
+This is extremely important because later I will provide the database requirements.
+
+When the database is added, the UI should not require a complete rewrite.
+
+---
+
+# 33. OPTIONAL NODE BACKEND
+
+If you want to create a backend prototype, use:
+
+Node.js + Express.js.
+
+Create API-style endpoints such as:
+
+```text
+GET    /api/tables
+POST   /api/tables
+PUT    /api/tables/:id
+
+GET    /api/menu
+POST   /api/menu
+PUT    /api/menu/:id
+DELETE /api/menu/:id
+
+GET    /api/orders
+POST   /api/orders
+PUT    /api/orders/:id
+
+GET    /api/billing/:tableId
+
+GET    /api/analytics
+```
+
+But:
+
+**DO NOT CONNECT A DATABASE.**
+
+Use in-memory/mock data if you implement the backend.
+
+If implementing Node makes the project unnecessarily complicated at this stage, prioritize the React frontend.
+
+---
+
+# 34. IMPORTANT — DATABASE PLACEHOLDER
+
+Create a clear abstraction layer.
+
+For example:
+
+```text
+UI
+ ↓
+service/API layer
+ ↓
+temporary mock data
+```
+
+Later:
+
+```text
+UI
+ ↓
+service/API layer
+ ↓
+Node/Express
+ ↓
+Database
+```
+
+Do not tightly couple every React component directly to mock data.
+
+---
+
+# 35. RESPONSIVE DESIGN
+
+Admin:
+
+* Desktop
+* Laptop
+* Tablet
+* Mobile
+
+Customer menu:
+
+**Mobile-first**
+
+The customer QR experience is one of the most important parts of the product.
+
+Test:
+
+* 360px
+* 390px
+* 414px
+* Tablet
+* Desktop
+
+---
+
+# 36. UI QUALITY
+
+The UI should look like a legitimate commercial SaaS product.
+
+Use:
+
+* Consistent spacing
+* Strong typography
+* Clear cards
+* Clean tables
+* Professional sidebar
+* Responsive navbar
+* Proper buttons
+* Empty states
+* Loading states
+* Error states
+* Toast notifications where useful
+* Modal/dialog components where useful
+
+Do not overuse:
+
+* Gradients
+* Huge rounded cards
+* Excessive glassmorphism
+* Random animations
+* Decorative elements that reduce usability
+
+The design should be modern but practical.
+
+---
+
+# 37. NO FAKE BUTTONS
+
+Every visible primary action should work.
+
+For example:
+
+If there is a:
+
+**Add Table**
+
+button → it must actually add a table to mock state.
+
+**Edit Menu Item**
+
+→ actually edit it.
+
+**Delete**
+
+→ actually remove/deactivate it.
+
+**Generate QR**
+
+→ actually display a QR.
+
+**Place Order**
+
+→ actually create an order in the prototype state.
+
+**Mark Paid**
+
+→ actually change payment state.
+
+Do not create buttons that only show a console log or do nothing.
+
+---
+
+# 38. QR GENERATION
+
+Use a React-compatible QR library if required.
+
+The QR should encode the table-specific customer route.
+
+Example:
+
+```text
+/menu/table/7
+```
+
+or the project's deployed base URL + route.
+
+Do not encode sensitive information into the QR.
+
+---
+
+# 39. MOCK DATA MUST BE REALISTIC
+
+Create enough data to demonstrate the application properly.
+
+At least:
+
+### Tables
+
+10–15 tables
+
+### Categories
+
+5–7 categories
+
+### Menu items
+
+25–40 items
+
+### Orders
+
+20+ sample orders
+
+Use realistic cafe data.
+
+This allows the dashboard, analytics, order history and table screens to look populated.
+
+---
+
+# 40. IMPORTANT — DO NOT BUILD A DATABASE YET
+
+Do NOT:
+
+* Create Supabase integration
+* Create MySQL integration
+* Create MongoDB integration
+* Create PostgreSQL integration
+* Ask for database credentials
+* Create production database migrations
+
+I will provide database requirements later.
+
+For now:
+
+**React prototype first.**
+
+Optional:
+
+**Node/Express mock backend.**
+
+---
+
+# 41. EXISTING PROJECT AUDIT
+
+Before modifying the code:
+
+Inspect:
+
+* package.json
+* src/
+* routes
+* components
+* existing pages
+* existing API
+* current styling
+* current dashboard
+* current database references
+* current authentication
+
+Identify what can be reused.
+
+Do not destroy working code unnecessarily.
+
+---
+
+# 42. CURRENT WRONG IMPLEMENTATION
+
+If the existing application currently contains features that do not belong to this cafe-management workflow:
+
+Do not automatically delete them.
+
+First determine whether they can be repurposed.
+
+If they are completely unrelated and interfere with the new architecture, remove/replace them carefully.
+
+The final application should clearly represent the Cafe Management System described in this document.
+
+---
+
+# 43. REQUIRED WORKING DEMO FLOW
+
+Before considering the work complete, demonstrate this entire flow:
+
+### STEP 1
+
+Open Admin Dashboard.
+
+### STEP 2
+
+Go to Tables.
+
+Create:
+
+Table 01
+Table 02
+Table 03
+
+### STEP 3
+
+Generate QR for Table 01.
+
+### STEP 4
+
+Open the QR/customer route.
+
+It must show:
+
+**Table 01**
+
+### STEP 5
+
+Customer opens menu.
+
+### STEP 6
+
+Customer adds:
+
+Cold Coffee × 2
+
+Paneer Pizza × 1
+
+### STEP 7
+
+Customer places order.
+
+### STEP 8
+
+Admin opens Orders.
+
+New order appears:
+
+#1042
+
+**Table 01**
+
+Cold Coffee × 2
+
+Paneer Pizza × 1
+
+### STEP 9
+
+Admin changes:
+
+Pending
+
+→ Preparing
+
+→ Ready
+
+→ Served
+
+### STEP 10
+
+Go to Billing.
+
+Table 01 should show its active bill.
+
+### STEP 11
+
+Mark payment:
+
+Paid
+
+Method:
+
+UPI
+
+### STEP 12
+
+Table 01 becomes:
+
+**Available**
+
+### STEP 13
+
+Analytics should reflect the order in the mock analytics/state.
+
+---
+
+# 44. FINAL ACCEPTANCE CRITERIA
+
+The implementation is considered successful only when the following are functional:
+
+* React.js application
+* JSX
+* Responsive admin dashboard
+* Table management
+* Add/edit/delete tables
+* Table status
+* Table-specific QR generation
+* Central menu
+* Menu categories
+* Menu item management
+* Item availability
+* Customer-facing QR menu
+* Table identification
+* Customer cart
+* Order placement
+* Owner order dashboard
+* Table-specific order tracking
+* Order status
+* Active table billing
+* Payment status
+* Payment method
+* Order history
+* Sales dashboard
+* Top-selling products
+* Low-selling products
+* Category sales
+* Kitchen/KOT view if practical
+* Customer order tracking
+* Mock/local data architecture
+* Optional Node/Express layer
+* No database
+
+---
+
+# 45. FINAL REPORT
+
+After implementation, provide a concise report:
+
+## Completed
+
+List everything actually working.
+
+## Modified
+
+List existing components/features that were changed.
+
+## Added
+
+List newly created components/pages/services.
+
+## Backend
+
+State whether Node/Express was added.
+
+## Database
+
+State clearly:
+
+**No database connected.**
+
+## Remaining
+
+List anything that could not be completed.
+
+Do not claim something is implemented merely because its UI exists.
+
+A feature is complete only when the interaction actually works.
+
+---
+
+# FINAL INSTRUCTION
+
+Do not ask me to provide the database right now.
+
+Do not stop after creating a few dashboard screens.
+
+Build as much of the above system as possible using:
+
+**React.js + JSX**
+
+and optionally:
+
+**Node.js + Express**
+
+with:
+
+**Mock/local data only.**
+
+The priority is to produce a **fully navigable, visually polished, functional prototype** of the Cafe Management + QR Ordering System.
+
+The database will be integrated in a later phase.
+
+Start by auditing the existing codebase, then implement this specification systematically.

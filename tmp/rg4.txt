@@ -1,0 +1,33 @@
+
+### hdr-left @ (0,0) 700x90
+ y=25 x=45-364 | Your Bite +
+ y=39 x=279-450 | Good Food Better Mood
+
+### hdr-mid @ (700,10) 700x75
+ y=35 x=1093-1218 | Q, search dishes...
+
+### hdr-right @ (1380,10) 449x75
+ y=32 x=1435-1771 | ® Veg B® Non-Veg a Table 01 —
+
+### sidebar-top @ (0,95) 352x200
+ y=127 x=46-155 | rg Popular
+ y=137 x=288-297 | i
+ y=193 x=97-295 | Starters 5
+ y=246 x=43-72 | Ia
+ y=254 x=97-296 | Main Course 6
+
+### sidebar-mid @ (0,280) 352x280
+ y=314 x=97-296 | Pizza 5
+ y=367 x=46-153 | = Burgers
+ y=375 x=289-296 | 4
+ y=427 x=49-71 | 7
+ y=435 x=97-296 | Beverages 7
+ y=488 x=44-158 | (i) Desserts
+ y=497 x=289-296 | 4
+
+### sidebar-bot @ (0,555) 352x305
+ y=631 x=185-247 | froth
+ y=661 x=198-236 | Med?
+ y=677 x=181-273 | ol
+ y=813 x=43-65 | [i
+ y=822 x=86-239 | Your ord 0 items

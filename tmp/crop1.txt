@@ -1,0 +1,10 @@
+
+### header (crop 0,0 1829x90)
+
+### sidebar (crop 0,88 352x772)
+
+### heading (crop 352,88 1477x76)
+
+### r1c1 (crop 388,160 694x168)
+
+### r1c2 (crop 1099,160 696x168)

@@ -1,0 +1,29 @@
+{
+  "name": "qr-ba",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node backend/scripts/dev.mjs",
+    "dev:web": "vite --config frontend/vite.config.js",
+    "api": "node backend/server/index.js",
+    "db:migrate": "node backend/scripts/migrate-neon.mjs",
+    "build": "vite build --config frontend/vite.config.js",
+    "preview": "vite preview --config frontend/vite.config.js"
+  },
+  "dependencies": {
+    "dotenv": "^18.0.4",
+    "express": "^5.2.1",
+    "pg": "^8.23.0",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.18.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^10.0.5",
+    "puppeteer-core": "^25.11.0",
+    "vite": "^6.0.0"
+  }
+}

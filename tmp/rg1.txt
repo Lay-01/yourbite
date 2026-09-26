@@ -1,0 +1,46 @@
+
+### header @ (0,0) 1829x90
+ y=25 x=45-220 | Your Bite
+ y=35 x=279-1603 | Good Food Better Mood Q, search dishes. ® Veg Non-Veg
+
+### sidebar @ (0,88) 352x772
+ y=128 x=46-155 | Hee Popular
+ y=137 x=288-297 | i
+ y=193 x=97-295 | Starters 5
+ y=246 x=43-72 | Ia
+ y=254 x=97-296 | Main Course 6
+ y=314 x=97-296 | Pizza 5
+ y=367 x=46-152 | = Burgers
+ y=375 x=289-296 | 4
+ y=427 x=49-71 | 7
+ y=435 x=97-295 | Beverages 7
+ y=488 x=44-158 | (i) Desserts
+ y=497 x=289-296 | 4
+ y=631 x=185-247 | froth
+ y=659 x=198-240 | Med
+ y=677 x=246-273 | Yo
+ y=742 x=60-90 | 4
+ y=813 x=43-65 | [i
+ y=822 x=86-239 | Your order 0 items
+
+### heading @ (352,88) 1477x76
+ y=111 x=386-536 | Popular
+ y=122 x=557-687 | — nen
+
+### r1c1 @ (388,160) 694x168
+ y=183 x=435-492 | Best Seller
+ y=192 x=923-943 | oF
+ y=212 x=407-531 | French Fries
+ y=240 x=407-676 | Crispy golden fries with house seasoning
+ y=249 x=934-992 | A >
+ y=260 x=407-921 | and dip. =
+ y=291 x=408-453 | 2160
+
+### r1c2 @ (1099,160) 696x168
+ y=181 x=1146-1565 | Best Seller ®
+ y=195 x=1689-1777 | = aN
+ y=206 x=1119-1668 | Chicken - 3
+ y=214 x=1205-1267 | Wings
+ y=234 x=1612-1637 | fier
+ y=243 x=1119-1400 | Glazed wings tossed in spicy peri-peri sauce.
+ y=287 x=1119-1630 | 3260 Be
