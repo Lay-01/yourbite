@@ -4,3 +4,9 @@ frontend/dist/
 .env
 .env.*
 !.env.example
+.vercel
+.kilo/
+tmp/
+powershell.cmd
+test.txt
+

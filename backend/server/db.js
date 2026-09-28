@@ -5,8 +5,8 @@ const { Pool } = pg;
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: Number(process.env.DATABASE_POOL_SIZE) || 8,
-  ssl: process.env.DATABASE_URL?.includes("sslmode=require")
-    ? { rejectUnauthorized: true }
+  ssl: process.env.DATABASE_URL?.includes("sslmode=") || process.env.DATABASE_URL?.includes("neon.tech")
+    ? { rejectUnauthorized: false }
     : undefined,
 });
 

@@ -3,6 +3,9 @@ import AdminLayout from "./components/layout/AdminLayout.jsx";
 import { CartProvider } from "./components/customer/CartProvider.jsx";
 import EmptyState from "./components/common/EmptyState.jsx";
 
+import ProtectedRoute from "./components/auth/ProtectedRoute.jsx";
+import LoginPage from "./pages/admin/LoginPage.jsx";
+
 import DashboardPage from "./pages/admin/DashboardPage.jsx";
 import TablesPage from "./pages/admin/TablesPage.jsx";
 import MenuPage from "./pages/admin/MenuPage.jsx";
@@ -48,8 +51,16 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/admin" replace />} />
+      <Route path="/login" element={<LoginPage />} />
 
-      <Route path="/admin" element={<AdminLayout />}>
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute>
+            <AdminLayout />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<DashboardPage />} />
         <Route path="tables" element={<TablesPage />} />
         <Route path="menu" element={<MenuPage />} />

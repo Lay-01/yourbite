@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useStore } from "../../services/store.js";
 import { getSettings, saveSettings, resetAllData } from "../../services/api.js";
+import { changeCredentials, getStoredUser } from "../../services/auth.js";
 import Icon from "../../components/common/Icon.jsx";
 import Modal from "../../components/common/Modal.jsx";
 import { useToast } from "../../components/common/Toast.jsx";
@@ -12,6 +13,14 @@ export default function SettingsPage() {
   const [error, setError] = useState("");
   const [confirmReset, setConfirmReset] = useState(false);
   const [reloading, setReloading] = useState(false);
+
+  // Security form state
+  const currentUser = getStoredUser();
+  const [currentPass, setCurrentPass] = useState("");
+  const [newEmail, setNewEmail] = useState(currentUser?.email || "");
+  const [newPassword, setNewPassword] = useState("");
+  const [securityErr, setSecurityErr] = useState("");
+  const [savingAuth, setSavingAuth] = useState(false);
 
   useEffect(() => setForm(getSettings()), [state.settings]);
 
@@ -27,6 +36,32 @@ export default function SettingsPage() {
       toast("Settings saved.");
     } catch (err) {
       setError(err.message);
+    }
+  };
+
+  const handleSecuritySubmit = async (e) => {
+    e.preventDefault();
+    setSecurityErr("");
+
+    if (!currentPass) {
+      setSecurityErr("Enter your current password to save security changes.");
+      return;
+    }
+
+    setSavingAuth(true);
+    try {
+      await changeCredentials({
+        currentPassword: currentPass,
+        newEmail,
+        newPassword: newPassword || undefined,
+      });
+      toast("Owner login credentials updated successfully!");
+      setCurrentPass("");
+      setNewPassword("");
+    } catch (err) {
+      setSecurityErr(err.message || "Failed to update security credentials.");
+    } finally {
+      setSavingAuth(false);
     }
   };
 
@@ -66,6 +101,47 @@ export default function SettingsPage() {
           <div className="form-actions">
             <button className="btn btn-primary" type="submit">
               <Icon name="check" size={15} /> Save Settings
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section className="panel">
+        <div className="panel-head"><h3>Owner Security & Credentials</h3></div>
+        <form className="form" onSubmit={handleSecuritySubmit}>
+          <label className="field">
+            <span>Owner Email / Username</span>
+            <input
+              type="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              placeholder="owner@yourbite.com"
+              required
+            />
+          </label>
+          <label className="field">
+            <span>New Password (optional)</span>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Leave blank to keep current password"
+            />
+          </label>
+          <label className="field">
+            <span>Current Password (required to save)</span>
+            <input
+              type="password"
+              value={currentPass}
+              onChange={(e) => setCurrentPass(e.target.value)}
+              placeholder="••••••••"
+              required
+            />
+          </label>
+          {securityErr ? <p className="form-error">{securityErr}</p> : null}
+          <div className="form-actions">
+            <button className="btn btn-primary" type="submit" disabled={savingAuth}>
+              <Icon name="check" size={15} /> {savingAuth ? "Updating..." : "Update Security Info"}
             </button>
           </div>
         </form>

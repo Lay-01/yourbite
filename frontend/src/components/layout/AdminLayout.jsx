@@ -5,6 +5,7 @@ import Icon from "../common/Icon.jsx";
 import { useStore } from "../../services/store.js";
 import { fmtDate, fmtTime, inr } from "../../utils/format.js";
 import { STATUS_LABELS } from "../../services/api.js";
+import { logout, getStoredUser } from "../../services/auth.js";
 
 const PAGE_TITLES = [
   { match: "/admin/tables", title: "Tables", sub: "Manage tables and generate QR codes" },
@@ -283,29 +284,40 @@ function AlertsBell() {
     </div>
   );
 }
-
 /* ------------------------------------------------------------------ */
 /* Avatar menu                                                         */
 /* ------------------------------------------------------------------ */
 function AvatarMenu({ cafeName }) {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const wrapRef = useClickOutside(() => setOpen(false));
+  const user = getStoredUser();
+  const ownerEmail = user?.email || "owner@yourbite.com";
+
+  const handleLogout = async () => {
+    setOpen(false);
+    await logout();
+    navigate("/login", { replace: true });
+  };
 
   return (
     <div className="avatar-wrap" ref={wrapRef}>
       <button className="avatar-trigger" onClick={() => setOpen((v) => !v)} aria-label="Owner console menu">
         <span className="avatar"><Icon name="users" size={16} /></span>
-        <span className="avatar-details"><strong>Owner</strong><small>Owner Console</small></span>
+        <span className="avatar-details">
+          <strong>Owner</strong>
+          <small>{ownerEmail.length > 18 ? ownerEmail.slice(0, 15) + "..." : ownerEmail}</small>
+        </span>
       </button>
       {open ? (
         <div className="avatar-pop">
           <div className="avatar-pop-head">
             <strong>{cafeName}</strong>
-            <small>Owner account</small>
+            <small>{ownerEmail}</small>
           </div>
           <div className="avatar-pop-body">
             <Link className="avatar-pop-item" to="/admin/settings" onClick={() => setOpen(false)}>
-              <Icon name="settings" size={15} /> Settings
+              <Icon name="settings" size={15} /> Settings & Security
             </Link>
             <a
               className="avatar-pop-item outside"
@@ -316,6 +328,9 @@ function AvatarMenu({ cafeName }) {
             >
               <Icon name="external" size={15} /> Customer menu
             </a>
+            <button className="avatar-pop-item logout-btn" onClick={handleLogout}>
+              <Icon name="alert" size={15} /> Sign Out
+            </button>
           </div>
         </div>
       ) : null}

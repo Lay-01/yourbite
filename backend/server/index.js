@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import "dotenv/config";
 import express from "express";
 import { pool } from "./db.js";
@@ -5,6 +6,78 @@ import { pool } from "./db.js";
 if (!process.env.DATABASE_URL) {
   console.error("DATABASE_URL is required by the YourBite API server.");
   process.exit(1);
+}
+
+function hashPassword(password, salt = crypto.randomBytes(16).toString("hex")) {
+  const hash = crypto.pbkdf2Sync(password, salt, 100000, 64, "sha512").toString("hex");
+  return { hash, salt };
+}
+
+function verifyPassword(password, storedHash, storedSalt) {
+  try {
+    const { hash } = hashPassword(password, storedSalt);
+    return crypto.timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(storedHash, "hex"));
+  } catch {
+    return false;
+  }
+}
+
+async function ensureAuthSchema(client) {
+  await client.query(`
+    create table if not exists public.owner_users (
+      id text primary key,
+      tenant_id text not null default 'tenant_owner_1',
+      email text not null unique,
+      password_hash text not null,
+      password_salt text not null,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now()
+    );
+    create table if not exists public.owner_sessions (
+      token text primary key,
+      user_id text not null references public.owner_users(id) on delete cascade,
+      created_at timestamptz not null default now(),
+      expires_at timestamptz not null
+    );
+
+    alter table public.owner_users add column if not exists tenant_id text default 'tenant_owner_1';
+    alter table public.restaurant_settings add column if not exists tenant_id text default 'tenant_owner_1';
+    alter table public.menu_categories add column if not exists tenant_id text default 'tenant_owner_1';
+    alter table public.dining_tables add column if not exists tenant_id text default 'tenant_owner_1';
+    alter table public.menu_items add column if not exists tenant_id text default 'tenant_owner_1';
+    alter table public.orders add column if not exists tenant_id text default 'tenant_owner_1';
+  `);
+
+  try {
+    await client.query(`
+      alter table public.restaurant_settings drop constraint if exists restaurant_settings_pkey;
+      alter table public.restaurant_settings add primary key (tenant_id);
+    `);
+  } catch {
+    /* ignore if primary key already exists */
+  }
+
+  try {
+    await client.query("alter table public.menu_categories drop constraint if exists menu_categories_name_key;");
+  } catch {
+    /* ignore */
+  }
+
+  const ownersToSeed = [
+    { id: "usr_owner_1", tenantId: "tenant_owner_1", email: "laymankad02@gmail.com", pass: "bogus12345" },
+    { id: "usr_owner_2", tenantId: "tenant_owner_2", email: "the.social.dev12@gmail.com", pass: "bogus212345" },
+    { id: "usr_owner_3", tenantId: "tenant_owner_3", email: "laypower123456789@gmail.com", pass: "bogus312345" },
+  ];
+
+  for (const owner of ownersToSeed) {
+    const { hash, salt } = hashPassword(owner.pass);
+    await client.query(
+      `insert into public.owner_users (id, tenant_id, email, password_hash, password_salt)
+       values ($1, $2, $3, $4, $5)
+       on conflict (email) do update set tenant_id = excluded.tenant_id`,
+      [owner.id, owner.tenantId, owner.email.toLowerCase(), hash, salt]
+    );
+  }
 }
 
 const app = express();
@@ -34,21 +107,97 @@ app.use((req, res, next) => {
   next();
 });
 
+const TENANT_NAMES = {
+  tenant_owner_1: "The Social Cafe",
+  tenant_owner_2: "Brew & Bite Bistro",
+  tenant_owner_3: "Artisan Coffee House",
+};
+
+async function ensureTenantSeeded(client, tenantId) {
+  const cafeName = TENANT_NAMES[tenantId] || "Your Restaurant";
+  await client.query(`
+    insert into public.restaurant_settings (tenant_id, cafe_name, tax_rate, opening_hours)
+    values ($1, $2, 5, '9:00 AM – 11:00 PM')
+    on conflict (tenant_id) do nothing;
+  `, [tenantId, cafeName]);
+
+  const catCheck = await client.query("select 1 from public.menu_categories where tenant_id = $1 limit 1", [tenantId]);
+  if (catCheck.rowCount === 0) {
+    const catBev = `cat-bev-${tenantId}`;
+    const catFood = `cat-food-${tenantId}`;
+
+    await client.query(`
+      insert into public.menu_categories (id, tenant_id, name, sort_order)
+      values ($1, $2, 'Beverages', 1), ($3, $2, 'Food', 2)
+      on conflict do nothing;
+    `, [catBev, tenantId, catFood]);
+
+    await client.query(`
+      insert into public.menu_items (id, tenant_id, name, description, category_id, price, emoji, veg, available, bestseller)
+      values
+        ($1, $2, 'Cold Coffee', 'Rich espresso blended with chilled milk & ice cream', $3, 120, '☕', true, true, true),
+        ($4, $2, 'Cappuccino', 'Fresh espresso topped with steamed milk foam', $3, 150, '☕', true, true, false),
+        ($5, $2, 'Paneer Pizza', 'Crispy crust topped with spiced cottage cheese & mozzarella', $6, 280, '🍕', true, true, true),
+        ($7, $2, 'French Fries', 'Golden crispy salted potato fries with dip', $6, 160, '🍟', true, true, false)
+      on conflict do nothing;
+    `, [
+      `i-cc-${tenantId}`, tenantId, catBev,
+      `i-cap-${tenantId}`,
+      `i-pp-${tenantId}`, catFood,
+      `i-ff-${tenantId}`
+    ]);
+  }
+
+  const tblCheck = await client.query("select 1 from public.dining_tables where tenant_id = $1 limit 1", [tenantId]);
+  if (tblCheck.rowCount === 0) {
+    await client.query(`
+      insert into public.dining_tables (id, tenant_id, number, seats, active, claimed)
+      values
+        ($1, $2, '01', 4, true, false),
+        ($3, $2, '02', 2, true, false),
+        ($4, $2, '03', 4, true, false),
+        ($5, $2, '04', 6, true, false)
+      on conflict do nothing;
+    `, [
+      `t-01-${tenantId}`, tenantId,
+      `t-02-${tenantId}`,
+      `t-03-${tenantId}`,
+      `t-04-${tenantId}`
+    ]);
+  }
+}
+
+async function getTenantFromReq(req, client) {
+  const authHeader = req.get("authorization") || "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : req.get("x-auth-token") || req.query.token;
+  const headerTenant = req.get("x-tenant-id") || req.query.tenant;
+
+  if (token) {
+    const res = await client.query(
+      `select u.tenant_id from public.owner_sessions s join public.owner_users u on u.id = s.user_id where s.token = $1 and s.expires_at > now()`,
+      [token]
+    );
+    if (res.rows[0]?.tenant_id) return res.rows[0].tenant_id;
+  }
+  if (headerTenant) return headerTenant;
+  return "tenant_owner_1";
+}
+
 const toMillis = (value) => (value ? new Date(value).getTime() : null);
 const toDate = (value) => (value === null || value === undefined ? null : new Date(Number(value)));
 
-async function loadSnapshot(client) {
-  const settingsResult = await client.query("select cafe_name, tax_rate, opening_hours from public.restaurant_settings where singleton = true");
-  const categoriesResult = await client.query("select id, name, sort_order from public.menu_categories order by sort_order, name");
-  const tablesResult = await client.query("select id, number, seats, active, claimed, created_at from public.dining_tables order by number");
+async function loadSnapshot(client, tenantId) {
+  const settingsResult = await client.query("select cafe_name, tax_rate, opening_hours from public.restaurant_settings where tenant_id = $1", [tenantId]);
+  const categoriesResult = await client.query("select id, name, sort_order from public.menu_categories where tenant_id = $1 order by sort_order, name", [tenantId]);
+  const tablesResult = await client.query("select id, number, seats, active, claimed, created_at from public.dining_tables where tenant_id = $1 order by number", [tenantId]);
   const itemsResult = await client.query(`select id, name, description, category_id, price, emoji, image, veg, available, bestseller, created_at
-      from public.menu_items order by created_at, name`);
+      from public.menu_items where tenant_id = $1 order by created_at, name`, [tenantId]);
   const ordersResult = await client.query(`select id, table_id, table_number, note, subtotal, status, payment_status,
-      payment_method, created_at, updated_at, paid_at from public.orders order by created_at`);
+      payment_method, created_at, updated_at, paid_at from public.orders where tenant_id = $1 order by created_at`, [tenantId]);
   const linesResult = await client.query(`select order_id, line_number, item_id, name, price, qty, veg
-      from public.order_items order by order_id, line_number`);
+      from public.order_items where order_id in (select id from public.orders where tenant_id = $1) order by order_id, line_number`, [tenantId]);
   const eventsResult = await client.query(`select order_id, sequence, status, label, created_at
-        from public.order_status_events order by order_id, sequence`);
+        from public.order_status_events where order_id in (select id from public.orders where tenant_id = $1) order by order_id, sequence`, [tenantId]);
 
   const linesByOrder = new Map();
   for (const line of linesResult.rows) {
@@ -90,25 +239,27 @@ async function loadSnapshot(client) {
   const row = settingsResult.rows[0];
   return {
     version: 1,
+    tenantId,
     seededAt: null,
     settings: {
-      cafeName: row?.cafe_name || "Your Restaurant",
-      taxRate: Number(row?.tax_rate || 0),
-      openingHours: row?.opening_hours || "",
+      cafeName: row?.cafe_name || TENANT_NAMES[tenantId] || "Your Restaurant",
+      taxRate: Number(row?.tax_rate || 5),
+      openingHours: row?.opening_hours || "9:00 AM – 11:00 PM",
     },
     categories: categoriesResult.rows.map((category) => ({
       id: category.id,
       name: category.name,
       order: Number(category.sort_order),
     })),
-    tables: tablesResult.rows.map((table) => ({
-      id: table.id,
-      number: table.number,
-      seats: Number(table.seats),
-      active: table.active,
-      claimed: table.claimed,
-      createdAt: toMillis(table.created_at),
-    })),
+tables: tablesResult.rows.map((table) => ({
+       id: table.id,
+       tenantId: tenantId,
+       number: table.number,
+       seats: Number(table.seats),
+       active: table.active,
+       claimed: table.claimed,
+       createdAt: toMillis(table.created_at),
+     })),
     items: itemsResult.rows.map((item) => ({
       id: item.id,
       name: item.name,
@@ -127,15 +278,15 @@ async function loadSnapshot(client) {
   };
 }
 
-async function persistChanges(changes) {
-  const client = await pool.connect();
+async function persistChanges(changes, tenantId, client) {
+  await client.query("begin");
   try {
-    await client.query("begin");
     if (changes.settings) {
-      await client.query(`insert into public.restaurant_settings (singleton, cafe_name, tax_rate, opening_hours)
-        values (true, $1, $2, $3)
-        on conflict (singleton) do update set cafe_name = excluded.cafe_name,
+      await client.query(`insert into public.restaurant_settings (tenant_id, cafe_name, tax_rate, opening_hours)
+        values ($1, $2, $3, $4)
+        on conflict (tenant_id) do update set cafe_name = excluded.cafe_name,
           tax_rate = excluded.tax_rate, opening_hours = excluded.opening_hours`, [
+        tenantId,
         changes.settings.cafeName || "Your Restaurant",
         Number(changes.settings.taxRate) || 0,
         changes.settings.openingHours || "",
@@ -143,41 +294,41 @@ async function persistChanges(changes) {
     }
 
     for (const category of changes.categories?.upsert || []) {
-      await client.query(`insert into public.menu_categories (id, name, sort_order) values ($1, $2, $3)
-        on conflict (id) do update set name = excluded.name, sort_order = excluded.sort_order`, [
-        category.id, category.name, Number(category.order) || 0,
+      await client.query(`insert into public.menu_categories (id, tenant_id, name, sort_order) values ($1, $2, $3, $4)
+        on conflict (id) do update set name = excluded.name, sort_order = excluded.sort_order, tenant_id = excluded.tenant_id`, [
+        category.id, tenantId, category.name, Number(category.order) || 0,
       ]);
     }
     for (const table of changes.tables?.upsert || []) {
-      await client.query(`insert into public.dining_tables (id, number, seats, active, claimed, created_at)
-        values ($1, $2, $3, $4, $5, coalesce($6, now()))
+      await client.query(`insert into public.dining_tables (id, tenant_id, number, seats, active, claimed, created_at)
+        values ($1, $2, $3, $4, $5, $6, coalesce($7, now()))
         on conflict (id) do update set number = excluded.number, seats = excluded.seats,
-          active = excluded.active, claimed = excluded.claimed`, [
-        table.id, table.number, Number(table.seats) || 4, table.active !== false,
+          active = excluded.active, claimed = excluded.claimed, tenant_id = excluded.tenant_id`, [
+        table.id, tenantId, table.number, Number(table.seats) || 4, table.active !== false,
         Boolean(table.claimed), toDate(table.createdAt),
       ]);
     }
     for (const item of changes.items?.upsert || []) {
       await client.query(`insert into public.menu_items
-        (id, name, description, category_id, price, emoji, image, veg, available, bestseller, created_at)
-        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, coalesce($11, now()))
+        (id, tenant_id, name, description, category_id, price, emoji, image, veg, available, bestseller, created_at)
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, coalesce($12, now()))
         on conflict (id) do update set name = excluded.name, description = excluded.description,
           category_id = excluded.category_id, price = excluded.price, emoji = excluded.emoji,
           image = excluded.image, veg = excluded.veg, available = excluded.available,
-          bestseller = excluded.bestseller`, [
-        item.id, item.name, item.description || "", item.categoryId, Number(item.price), item.emoji || "",
+          bestseller = excluded.bestseller, tenant_id = excluded.tenant_id`, [
+        item.id, tenantId, item.name, item.description || "", item.categoryId, Number(item.price), item.emoji || "",
         item.image || "", Boolean(item.veg), Boolean(item.available), Boolean(item.bestseller), toDate(item.createdAt),
       ]);
     }
     for (const order of changes.orders?.upsert || []) {
       await client.query(`insert into public.orders
-        (id, table_id, table_number, note, subtotal, status, payment_status, payment_method, created_at, updated_at, paid_at)
-        values ($1, $2, $3, $4, $5, $6, $7, $8, coalesce($9, now()), coalesce($10, now()), $11)
+        (id, tenant_id, table_id, table_number, note, subtotal, status, payment_status, payment_method, created_at, updated_at, paid_at)
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, coalesce($10, now()), coalesce($11, now()), $12)
         on conflict (id) do update set table_id = excluded.table_id, table_number = excluded.table_number,
           note = excluded.note, subtotal = excluded.subtotal, status = excluded.status,
           payment_status = excluded.payment_status, payment_method = excluded.payment_method,
-          updated_at = excluded.updated_at, paid_at = excluded.paid_at`, [
-        order.id, order.tableId || null, order.tableNumber, order.note || "", Number(order.subtotal) || 0,
+          updated_at = excluded.updated_at, paid_at = excluded.paid_at, tenant_id = excluded.tenant_id`, [
+        order.id, tenantId, order.tableId || null, order.tableNumber, order.note || "", Number(order.subtotal) || 0,
         order.status, order.paymentStatus || "pending", order.paymentMethod || null,
         toDate(order.createdAt), toDate(order.updatedAt), toDate(order.paidAt),
       ]);
@@ -208,16 +359,14 @@ async function persistChanges(changes) {
       ]);
     }
 
-    for (const id of changes.orders?.delete || []) await client.query("delete from public.orders where id = $1", [id]);
-    for (const id of changes.items?.delete || []) await client.query("delete from public.menu_items where id = $1", [id]);
-    for (const id of changes.tables?.delete || []) await client.query("delete from public.dining_tables where id = $1", [id]);
-    for (const id of changes.categories?.delete || []) await client.query("delete from public.menu_categories where id = $1", [id]);
+    for (const id of changes.orders?.delete || []) await client.query("delete from public.orders where id = $1 and tenant_id = $2", [id, tenantId]);
+    for (const id of changes.items?.delete || []) await client.query("delete from public.menu_items where id = $1 and tenant_id = $2", [id, tenantId]);
+    for (const id of changes.tables?.delete || []) await client.query("delete from public.dining_tables where id = $1 and tenant_id = $2", [id, tenantId]);
+    for (const id of changes.categories?.delete || []) await client.query("delete from public.menu_categories where id = $1 and tenant_id = $2", [id, tenantId]);
     await client.query("commit");
   } catch (error) {
     await client.query("rollback").catch(() => {});
     throw error;
-  } finally {
-    client.release();
   }
 }
 
@@ -230,11 +379,15 @@ app.get("/api/health", async (_req, res) => {
   }
 });
 
-app.get("/api/bootstrap", async (_req, res) => {
+app.get("/api/bootstrap", async (req, res) => {
   const client = await pool.connect();
   try {
+    const tenantId = await getTenantFromReq(req, client);
+    await ensureAuthSchema(client);
+    await ensureTenantSeeded(client, tenantId);
+
     await client.query("begin isolation level repeatable read read only");
-    const snapshot = await loadSnapshot(client);
+    const snapshot = await loadSnapshot(client, tenantId);
     await client.query("commit");
     res.json(snapshot);
   } catch (error) {
@@ -250,12 +403,177 @@ app.post("/api/changes", async (req, res) => {
   if (!req.body || typeof req.body !== "object") {
     return res.status(400).json({ error: "Invalid change set." });
   }
+  const client = await pool.connect();
   try {
-    await persistChanges(req.body);
-    res.json({ ok: true });
+    const tenantId = await getTenantFromReq(req, client);
+    await ensureAuthSchema(client);
+    await ensureTenantSeeded(client, tenantId);
+    await persistChanges(req.body, tenantId, client);
+    res.json({ ok: true, tenantId });
   } catch (error) {
     console.error("Database change failed:", error.message);
     res.status(400).json({ error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+/* ================================================================== */
+/* Authentication Endpoints                                            */
+/* ================================================================== */
+
+app.post("/api/auth/login", async (req, res) => {
+  const { email, password } = req.body || {};
+  if (!email || !password) {
+    return res.status(400).json({ error: "Email and password are required." });
+  }
+
+  const cleanEmail = String(email).trim().toLowerCase();
+  const client = await pool.connect();
+  try {
+    await ensureAuthSchema(client);
+    const userResult = await client.query(
+      "select id, tenant_id, email, password_hash, password_salt from public.owner_users where lower(email) = $1",
+      [cleanEmail]
+    );
+
+    const user = userResult.rows[0];
+    if (!user || !verifyPassword(password, user.password_hash, user.password_salt)) {
+      return res.status(401).json({ error: "Invalid email or password." });
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+    await client.query(
+      "insert into public.owner_sessions (token, user_id, expires_at) values ($1, $2, $3)",
+      [token, user.id, expiresAt]
+    );
+
+    res.json({
+      ok: true,
+      token,
+      user: { id: user.id, email: user.email, tenantId: user.tenant_id },
+    });
+  } catch (error) {
+    console.error("Login failed:", error.message);
+    res.status(500).json({ error: "Login failed due to a server error." });
+  } finally {
+    client.release();
+  }
+});
+
+app.get("/api/auth/me", async (req, res) => {
+  const authHeader = req.get("authorization") || "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : req.get("x-auth-token");
+  if (!token) {
+    return res.status(401).json({ error: "No token provided." });
+  }
+
+  const client = await pool.connect();
+  try {
+    await ensureAuthSchema(client);
+    const sessionResult = await client.query(
+      `select s.token, u.id, u.email, u.tenant_id
+       from public.owner_sessions s
+       join public.owner_users u on u.id = s.user_id
+       where s.token = $1 and s.expires_at > now()`,
+      [token]
+    );
+
+    const session = sessionResult.rows[0];
+    if (!session) {
+      return res.status(401).json({ error: "Invalid or expired session token." });
+    }
+
+    res.json({ ok: true, user: { id: session.id, email: session.email, tenantId: session.tenant_id } });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+app.post("/api/auth/logout", async (req, res) => {
+  const authHeader = req.get("authorization") || "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : req.get("x-auth-token") || req.body?.token;
+
+  if (token) {
+    try {
+      await pool.query("delete from public.owner_sessions where token = $1", [token]);
+    } catch {
+      /* ignore delete errors on logout */
+    }
+  }
+  res.json({ ok: true });
+});
+
+app.post("/api/auth/change-credentials", async (req, res) => {
+  const authHeader = req.get("authorization") || "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : req.get("x-auth-token");
+  const { currentPassword, newEmail, newPassword } = req.body || {};
+
+  if (!token) {
+    return res.status(401).json({ error: "Unauthorized." });
+  }
+  if (!currentPassword) {
+    return res.status(400).json({ error: "Current password is required to save credential changes." });
+  }
+
+  const client = await pool.connect();
+  try {
+    await ensureAuthSchema(client);
+    const sessionResult = await client.query(
+      `select s.token, u.id, u.email, u.password_hash, u.password_salt
+       from public.owner_sessions s
+       join public.owner_users u on u.id = s.user_id
+       where s.token = $1 and s.expires_at > now()`,
+      [token]
+    );
+
+    const session = sessionResult.rows[0];
+    if (!session) {
+      return res.status(401).json({ error: "Invalid or expired session." });
+    }
+
+    if (!verifyPassword(currentPassword, session.password_hash, session.password_salt)) {
+      return res.status(400).json({ error: "Current password is incorrect." });
+    }
+
+    const updates = [];
+    const values = [];
+    let paramIndex = 1;
+
+    if (newEmail && newEmail.trim() && newEmail.trim().toLowerCase() !== session.email.toLowerCase()) {
+      updates.push(`email = $${paramIndex++}`);
+      values.push(newEmail.trim().toLowerCase());
+    }
+
+    if (newPassword && newPassword.trim()) {
+      const { hash, salt } = hashPassword(newPassword.trim());
+      updates.push(`password_hash = $${paramIndex++}`);
+      values.push(hash);
+      updates.push(`password_salt = $${paramIndex++}`);
+      values.push(salt);
+    }
+
+    if (updates.length === 0) {
+      return res.json({ ok: true, user: { id: session.id, email: session.email }, message: "No credential changes requested." });
+    }
+
+    updates.push(`updated_at = now()`);
+    values.push(session.id);
+    const query = `update public.owner_users set ${updates.join(", ")} where id = $${paramIndex} returning id, email`;
+
+    const updatedResult = await client.query(query, values);
+    const updatedUser = updatedResult.rows[0];
+
+    res.json({ ok: true, user: { id: updatedUser.id, email: updatedUser.email } });
+  } catch (error) {
+    console.error("Change credentials error:", error.message);
+    res.status(400).json({ error: error.message });
+  } finally {
+    client.release();
   }
 });
 

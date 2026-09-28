@@ -20,17 +20,19 @@ function DatabaseSyncFeedback() {
 }
 
 async function startApp() {
-  await initializeStore();
-  createRoot(document.getElementById("root")).render(
-    <React.StrictMode>
-      <BrowserRouter>
-        <ToastProvider>
-          <DatabaseSyncFeedback />
-          <App />
-        </ToastProvider>
-      </BrowserRouter>
-    </React.StrictMode>
-  );
-}
+   const urlParams = new URLSearchParams(window.location.search);
+   const tenant = urlParams.get('tenant');
+   await initializeStore(tenant);
+   createRoot(document.getElementById("root")).render(
+     <React.StrictMode>
+       <BrowserRouter>
+         <ToastProvider>
+           <DatabaseSyncFeedback />
+           <App />
+         </ToastProvider>
+       </BrowserRouter>
+     </React.StrictMode>
+   );
+ }
 
 startApp();

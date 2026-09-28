@@ -8,7 +8,7 @@ export default function QrModal({ open, table, onClose }) {
   const canvasRef = useRef(null);
   const toast = useToast();
   const [error, setError] = useState("");
-  const url = table ? `${window.location.origin}/menu/table/${table.number}` : "";
+  const url = table ? `${window.location.origin}/menu/table/${table.number}?tenant=${table.tenant_id}` : "";
   useEffect(() => {
     if (!open || !table || !canvasRef.current) return;
     QRCode.toCanvas(canvasRef.current, url, { width: 230, margin: 1 }).then(() => setError("")).catch(() => setError("Could not generate this QR code."));

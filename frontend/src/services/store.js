@@ -117,13 +117,21 @@ function hasChanges(changes) {
   );
 }
 
+function getAuthHeaders() {
+  const token = typeof localStorage !== "undefined" ? localStorage.getItem("yourbite_auth_token") : null;
+  const headers = { Accept: "application/json" };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
 function persistChanges(changes) {
   databaseWriteQueue = databaseWriteQueue
     .catch(() => {})
     .then(async () => {
+      const headers = { "Content-Type": "application/json", ...getAuthHeaders() };
       const response = await fetch("/api/changes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(changes),
       });
       const result = await response.json().catch(() => ({}));
@@ -156,25 +164,29 @@ export function setState(updater) {
   notify();
 }
 
-export async function initializeStore() {
-  try {
-    const response = await fetch("/api/bootstrap", { headers: { Accept: "application/json" } });
-    const snapshot = await response.json();
-    if (!response.ok) throw new Error(snapshot.error || "Database bootstrap failed.");
-    state = withTableStatuses({ ...snapshot, version: SCHEMA_VERSION, seededAt: null });
-    databaseReady = true;
-    persist(state);
-    notify();
-    return true;
-  } catch (error) {
-    databaseReady = false;
-    state = withTableStatuses(emptyState());
-    persist(state);
-    notify();
-    console.error("Could not load Neon data:", error.message);
-    return false;
-  }
-}
+export async function initializeStore(tenantId) {
+   let url = "/api/bootstrap";
+   if (tenantId) {
+     url += `?tenant=${encodeURIComponent(tenantId)}`;
+   }
+   try {
+     const response = await fetch(url, { headers: getAuthHeaders() });
+     const snapshot = await response.json();
+     if (!response.ok) throw new Error(snapshot.error || "Database bootstrap failed.");
+     state = withTableStatuses({ ...snapshot, version: SCHEMA_VERSION, seededAt: null });
+     databaseReady = true;
+     persist(state);
+     notify();
+     return true;
+   } catch (error) {
+     databaseReady = false;
+     state = withTableStatuses(emptyState());
+     persist(state);
+     notify();
+     console.error("Could not load Neon data:", error.message);
+     return false;
+   }
+ }
 
 export function flushDatabaseWrites() {
   return databaseWriteQueue;

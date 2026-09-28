@@ -1,0 +1,8 @@
+# Exclude large binary files not needed for deployment
+eng.traineddata
+tmp/
+*.log
+
+# Exclude local dev files
+backend/scripts/
+render.yaml
