@@ -67,7 +67,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          url="$(vercel deploy --prod --yes --project="$VERCEL_PROJECT_ID" --token="$VERCEL_TOKEN")"
+          error_file="$(mktemp)"
+          trap 'rm -f "$error_file"' EXIT
+          if ! url="$(vercel deploy --prod --yes --project="$VERCEL_PROJECT_ID" --token="$VERCEL_TOKEN" 2>"$error_file")"; then
+            error_message="$(tr '\n' ' ' < "$error_file" | sed 's/::/--/g')"
+            echo "::error title=Vercel deployment failed::$error_message"
+            exit 1
+          fi
           echo "deployment_url=${url##*$'\n'}" >> "$GITHUB_OUTPUT"
 
       - name: Deployment URL
