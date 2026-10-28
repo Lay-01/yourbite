@@ -67,7 +67,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          url="$(vercel deploy --prod --yes --scope="$VERCEL_ORG_ID" --project="$VERCEL_PROJECT_ID" --token="$VERCEL_TOKEN")"
+          url="$(vercel deploy --prod --yes --project="$VERCEL_PROJECT_ID" --token="$VERCEL_TOKEN")"
           echo "deployment_url=${url##*$'\n'}" >> "$GITHUB_OUTPUT"
 
       - name: Deployment URL
