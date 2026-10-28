@@ -1,4 +1,5 @@
 import { initializeStore } from "./store.js";
+import { getTenantId } from "./tenant.js";
 
 const TOKEN_KEY = "yourbite_auth_token";
 const USER_KEY = "yourbite_auth_user";
@@ -10,8 +11,12 @@ export function getToken() {
 export function getStoredUser() {
   try {
     const raw = localStorage.getItem(USER_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const user = JSON.parse(raw);
+    const tenantId = getTenantId(user);
+    return tenantId ? { ...user, tenantId } : null;
   } catch {
+    clearSession();
     return null;
   }
 }
@@ -20,7 +25,10 @@ export function setSession(token, user) {
   if (token) localStorage.setItem(TOKEN_KEY, token);
   else localStorage.removeItem(TOKEN_KEY);
 
-  if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
+  if (user) {
+    const tenantId = getTenantId(user);
+    localStorage.setItem(USER_KEY, JSON.stringify({ ...user, tenantId }));
+  }
   else localStorage.removeItem(USER_KEY);
 }
 
@@ -51,7 +59,7 @@ export async function login(email, password) {
     }
 
     setSession(data.token, data.user);
-    await initializeStore();
+    await initializeStore(data.user?.tenantId);
     return data.user;
   } catch (err) {
     if (err.message.includes("Failed to fetch") || err.message.includes("NetworkError")) {
@@ -80,10 +88,10 @@ export async function checkAuth() {
 
     const data = await response.json();
     setSession(token, data.user);
+    await initializeStore(data.user?.tenantId);
     return data.user;
   } catch {
-    // If network fails temporarily, retain existing session user if available
-    return getStoredUser();
+    return null;
   }
 }
 

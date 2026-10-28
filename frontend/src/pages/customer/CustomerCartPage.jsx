@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useCart } from "../../components/customer/CartProvider.jsx";
 import { useStore } from "../../services/store.js";
 import Icon from "../../components/common/Icon.jsx";
@@ -13,9 +13,11 @@ export default function CustomerCartPage() {
   const state = useStore();
   const toast = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [placed, setPlaced] = useState(null);
   const [error, setError] = useState("");
+  const [placing, setPlacing] = useState(false);
 
   if (!cart?.table) {
     return (
@@ -27,16 +29,20 @@ export default function CustomerCartPage() {
 
   const table = cart.table;
   const cafeName = state.settings.cafeName;
+  const menuHref = `/menu/table/${table.number}${location.search}`;
 
-  const doPlace = () => {
+  const doPlace = async () => {
+    setPlacing(true);
     try {
-      const order = cart.place();
+      const order = await cart.place();
       setConfirmOpen(false);
       setPlaced(order);
     } catch (err) {
       setConfirmOpen(false);
       setError(err.message);
       toast(err.message, "error");
+    } finally {
+      setPlacing(false);
     }
   };
 
@@ -71,10 +77,10 @@ export default function CustomerCartPage() {
           </ul>
 
           <div className="success-actions">
-            <button className="btn btn-primary btn-block" onClick={() => navigate(`/menu/order/${placed.id}`)}>
+            <button className="btn btn-primary btn-block" onClick={() => navigate(`/menu/order/${placed.id}${location.search}`)}>
               Track My Order
             </button>
-            <Link className="btn btn-soft btn-block" to={`/menu/table/${table.number}`}>
+            <Link className="btn btn-soft btn-block" to={menuHref}>
               Back to Menu
             </Link>
           </div>
@@ -96,7 +102,7 @@ export default function CustomerCartPage() {
           title="Your cart is empty"
           subtitle="Add something delicious from the menu."
           action={
-            <Link className="btn btn-primary" to={`/menu/table/${table.number}`}>
+            <Link className="btn btn-primary" to={menuHref}>
               Browse Menu
             </Link>
           }
@@ -109,7 +115,7 @@ export default function CustomerCartPage() {
   return (
     <div className="cust-shell">
       <header className="cust-header compact">
-        <Link className="back-link" to={`/menu/table/${table.number}`}>
+        <Link className="back-link" to={menuHref}>
           <Icon name="arrowLeft" size={18} /> Menu
         </Link>
       </header>
@@ -164,7 +170,9 @@ export default function CustomerCartPage() {
         footer={
           <>
             <button className="btn btn-ghost" onClick={() => setConfirmOpen(false)}>Edit Cart</button>
-            <button className="btn btn-primary" onClick={doPlace}>Confirm Order</button>
+            <button className="btn btn-primary" onClick={doPlace} disabled={placing}>
+              {placing ? "Placing order..." : "Confirm Order"}
+            </button>
           </>
         }
       >

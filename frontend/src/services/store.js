@@ -1,5 +1,6 @@
 // UI state cache hydrated from the Node API; Neon is the persistent source.
 import { useSyncExternalStore } from "react";
+import { getTenantId } from "./tenant.js";
 
 const STORAGE_KEY = "yourbite.state.v2";
 const SCHEMA_VERSION = 2;
@@ -7,6 +8,27 @@ const SCHEMA_VERSION = 2;
 const listeners = new Set();
 let databaseReady = false;
 let databaseWriteQueue = Promise.resolve();
+
+function storageKey(tenantId, publicMenu = false) {
+  const onPublicMenu = publicMenu || (
+    typeof window !== "undefined" && window.location.pathname.startsWith("/menu/")
+  );
+  if (!onPublicMenu) {
+    try {
+      const user = JSON.parse(localStorage.getItem("yourbite_auth_user") || "null");
+      const tenantId = getTenantId(user);
+      if (tenantId) return `${STORAGE_KEY}.user.${user.id}`;
+    } catch {
+      /* use the public tenant scope when there is no valid cached user */
+    }
+  }
+  const publicTenant = tenantId || (
+    typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("tenant") : null
+  );
+  return `${STORAGE_KEY}.tenant.${publicTenant || "public"}`;
+}
+
+let activeStorageKey = storageKey();
 
 /* ------------------------------------------------------------------ */
 /* Table lifecycle helpers                                             */
@@ -48,6 +70,7 @@ export function withTableStatuses(state) {
 function emptyState() {
   return {
     version: SCHEMA_VERSION,
+    tenantId: null,
     seededAt: null,
     tables: [],
     categories: [],
@@ -64,7 +87,7 @@ function emptyState() {
 
 function load() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(activeStorageKey);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && parsed.version === SCHEMA_VERSION) return parsed;
@@ -79,7 +102,7 @@ function load() {
 
 function persist(state) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(activeStorageKey, JSON.stringify(state));
   } catch {
     /* storage full/blocked — state stays in memory for this session */
   }
@@ -117,8 +140,10 @@ function hasChanges(changes) {
   );
 }
 
-function getAuthHeaders() {
-  const token = typeof localStorage !== "undefined" ? localStorage.getItem("yourbite_auth_token") : null;
+function getAuthHeaders(publicMenu = false) {
+  const token = !publicMenu && typeof localStorage !== "undefined"
+    ? localStorage.getItem("yourbite_auth_token")
+    : null;
   const headers = { Accept: "application/json" };
   if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
@@ -164,29 +189,38 @@ export function setState(updater) {
   notify();
 }
 
-export async function initializeStore(tenantId) {
-   let url = "/api/bootstrap";
-   if (tenantId) {
-     url += `?tenant=${encodeURIComponent(tenantId)}`;
-   }
-   try {
-     const response = await fetch(url, { headers: getAuthHeaders() });
-     const snapshot = await response.json();
-     if (!response.ok) throw new Error(snapshot.error || "Database bootstrap failed.");
-     state = withTableStatuses({ ...snapshot, version: SCHEMA_VERSION, seededAt: null });
-     databaseReady = true;
-     persist(state);
-     notify();
-     return true;
-   } catch (error) {
-     databaseReady = false;
-     state = withTableStatuses(emptyState());
-     persist(state);
-     notify();
-     console.error("Could not load Neon data:", error.message);
-     return false;
-   }
- }
+export function setStateLocally(updater) {
+  state = withTableStatuses(updater(state));
+  persist(state);
+  notify();
+}
+
+export async function initializeStore(tenantId, { publicMenu = false } = {}) {
+  const resolvedTenantId = publicMenu ? tenantId : tenantId || getTenantId();
+  activeStorageKey = storageKey(resolvedTenantId, publicMenu);
+  let url = "/api/bootstrap";
+  if (resolvedTenantId) {
+    url += `?tenant=${encodeURIComponent(resolvedTenantId)}`;
+  }
+  try {
+    const response = await fetch(url, { headers: getAuthHeaders(publicMenu) });
+    const snapshot = await response.json();
+    if (!response.ok) throw new Error(snapshot.error || "Database bootstrap failed.");
+    activeStorageKey = storageKey(snapshot.tenantId || resolvedTenantId, publicMenu);
+    state = withTableStatuses({ ...snapshot, version: SCHEMA_VERSION, seededAt: null });
+    databaseReady = true;
+    persist(state);
+    notify();
+    return true;
+  } catch (error) {
+    databaseReady = false;
+    state = withTableStatuses(emptyState());
+    persist(state);
+    notify();
+    console.error("Could not load Neon data:", error.message);
+    return false;
+  }
+}
 
 export function flushDatabaseWrites() {
   return databaseWriteQueue;

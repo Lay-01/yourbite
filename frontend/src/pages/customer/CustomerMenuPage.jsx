@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useStore } from "../../services/store.js";
 import { useCart } from "../../components/customer/CartProvider.jsx";
 import Icon from "../../components/common/Icon.jsx";
@@ -71,8 +71,10 @@ function ItemCard({ item, inCartQty, onAdd, onInc, onDec }) {
 
 export default function CustomerMenuPage() {
   const { tableId } = useParams();
+  const [searchParams] = useSearchParams();
   const state = useStore();
   const cart = useCart();
+  const requestedTenant = searchParams.get("tenant");
 
   const [search, setSearch] = useState("");
   const [vegFilter, setVegFilter] = useState(null); // null = all, true = veg, false = non-veg
@@ -95,19 +97,20 @@ export default function CustomerMenuPage() {
     return available.filter((item) => item.categoryId === category);
   }, [available, category]);
 
-  if (!cart?.table) {
+  if (!requestedTenant || requestedTenant !== state.tenantId || !cart?.table) {
     return (
       <div className="cust-shell">
         <EmptyState
           icon="qr"
-          title={`Table “${tableId}” not found`}
-          subtitle="This QR code may be out of date. Ask staff for the correct table code."
+          title="Invalid QR"
+          subtitle={`Table “${tableId}” could not be loaded for this cafe. Ask staff for the correct QR code.`}
         />
       </div>
     );
   }
 
   const table = cart.table;
+  const tenant = requestedTenant;
   const cafeName = state.settings.cafeName || "Your Restaurant";
   const q = search.trim().toLowerCase();
   const filtered = q
@@ -211,7 +214,7 @@ export default function CustomerMenuPage() {
           <span className="qr-cart-copy"><strong>Your order</strong><small>{cart.count} {cart.count === 1 ? "item" : "items"}</small></span>
           {cart.count > 0 ? <strong className="qr-cart-total">{inr(cart.subtotal)}</strong> : null}
         </div>
-        <Link to={`/menu/table/${table.number}/cart`} className="qr-cart-view">View cart <Icon name="arrowRight" size={16} /></Link>
+        <Link to={`/menu/table/${table.number}/cart?tenant=${encodeURIComponent(tenant)}`} className="qr-cart-view">View cart <Icon name="arrowRight" size={16} /></Link>
       </div>
     </div>
   );

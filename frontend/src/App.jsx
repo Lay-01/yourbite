@@ -5,6 +5,7 @@ import EmptyState from "./components/common/EmptyState.jsx";
 
 import ProtectedRoute from "./components/auth/ProtectedRoute.jsx";
 import LoginPage from "./pages/admin/LoginPage.jsx";
+import { getToken } from "./services/auth.js";
 
 import DashboardPage from "./pages/admin/DashboardPage.jsx";
 import TablesPage from "./pages/admin/TablesPage.jsx";
@@ -35,13 +36,14 @@ function ScanPrompt() {
 }
 
 function NotFound() {
+  const authenticated = Boolean(getToken());
   return (
     <div className="page notfound">
       <EmptyState
         icon="alert"
         title="404 — Page not found"
         subtitle="That route doesn't exist in this prototype."
-        action={<Link className="btn btn-primary" to="/admin">Back to Dashboard</Link>}
+        action={<Link className="btn btn-primary" to={authenticated ? "/admin" : "/"}>Back to Home</Link>}
       />
     </div>
   );

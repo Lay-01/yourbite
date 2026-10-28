@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { login, getToken } from "../../services/auth.js";
-import { initializeStore } from "../../services/store.js";
 import Icon from "../../components/common/Icon.jsx";
 
 export default function LoginPage() {
@@ -17,7 +16,7 @@ export default function LoginPage() {
   // If user is already logged in, redirect immediately to /admin
   useEffect(() => {
     if (getToken()) {
-      const from = location.state?.from?.pathname || "/admin";
+      const from = location.state?.from || "/admin";
       navigate(from, { replace: true });
     }
   }, [navigate, location]);
@@ -29,9 +28,7 @@ const handleLogin = async (e) => {
 
      try {
        await login(email, password);
-       // Refetch bootstrap data to get the correct tenant's data after login
-       await initializeStore();
-       const from = location.state?.from?.pathname || "/admin";
+       const from = location.state?.from || "/admin";
        navigate(from, { replace: true });
      } catch (err) {
        setError(err.message || "Invalid email or password.");

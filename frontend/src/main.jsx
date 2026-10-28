@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App.jsx";
 import { ToastProvider, useToast } from "./components/common/Toast.jsx";
 import { initializeStore } from "./services/store.js";
+import { getToken } from "./services/auth.js";
 import "./style.css";
 import "./customer.css";
 
@@ -20,19 +21,24 @@ function DatabaseSyncFeedback() {
 }
 
 async function startApp() {
-   const urlParams = new URLSearchParams(window.location.search);
-   const tenant = urlParams.get('tenant');
-   await initializeStore(tenant);
-   createRoot(document.getElementById("root")).render(
-     <React.StrictMode>
-       <BrowserRouter>
-         <ToastProvider>
-           <DatabaseSyncFeedback />
-           <App />
-         </ToastProvider>
-       </BrowserRouter>
-     </React.StrictMode>
-   );
- }
+  const urlParams = new URLSearchParams(window.location.search);
+  const publicMenu = window.location.pathname.startsWith("/menu/");
+  const tenant = publicMenu ? urlParams.get("tenant") : null;
+  if (publicMenu && tenant) {
+    await initializeStore(tenant, { publicMenu: true });
+  } else if (getToken()) {
+    await initializeStore();
+  }
+  createRoot(document.getElementById("root")).render(
+    <React.StrictMode>
+      <BrowserRouter>
+        <ToastProvider>
+          <DatabaseSyncFeedback />
+          <App />
+        </ToastProvider>
+      </BrowserRouter>
+    </React.StrictMode>
+  );
+}
 
 startApp();

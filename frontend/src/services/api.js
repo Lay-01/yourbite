@@ -1,16 +1,16 @@
 // Service / API layer.
 //
 // Shared domain operations used by the UI and backed by the hydrated store.
-// They are plain synchronous functions over the local store today; swapping
-// the bodies for `await fetch("/api/...")` later requires no UI changes.
 import {
   getState,
   setState,
+  setStateLocally,
   resetDemoData,
   computeTableStatus,
   withTableStatuses,
 } from "./store.js";
 import { startOfDay, endOfDay } from "../utils/format.js";
+import { getTenantId } from "./tenant.js";
 
 /* ================================================================== */
 /* Order constants                                                     */
@@ -73,6 +73,10 @@ function fail(message) {
   throw new ServiceError(message);
 }
 
+function tenantIdPart() {
+  return String(getState().tenantId || getTenantId() || "local").replace(/[^a-z0-9-]/gi, "-");
+}
+
 /* ================================================================== */
 /* Tables                                                              */
 /* ================================================================== */
@@ -95,9 +99,10 @@ export function addTable({ number, seats }) {
   if (!num) fail("Table number is required.");
   if (getTableByNumber(num)) fail(`Table ${num} already exists.`);
 
-  const id = `t-${num.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now().toString(36)}`;
+  const id = `t-${num.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${tenantIdPart()}-${Date.now().toString(36)}`;
   const table = {
     id,
+    tenantId: getState().tenantId || getTenantId(),
     number: num,
     seats: Number(seats) || 4,
     active: true,
@@ -180,7 +185,8 @@ export function addCategory({ name }) {
     fail("A category with this name already exists.");
   const cats = listCategories();
   const category = {
-    id: `cat-${clean.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now().toString(36)}`,
+    id: `cat-${clean.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${tenantIdPart()}-${Date.now().toString(36)}`,
+    tenantId: getState().tenantId || getTenantId(),
     name: clean,
     order: (cats[cats.length - 1]?.order || 0) + 1,
   };
@@ -270,7 +276,8 @@ export function saveItem(data) {
 
   const item = {
     ...patch,
-    id: `i-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now().toString(36)}`,
+    tenantId: getState().tenantId || getTenantId(),
+    id: `i-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${tenantIdPart()}-${Date.now().toString(36)}`,
     createdAt: Date.now(),
   };
   commit((s) => ({ ...s, items: [...s.items, item] }));
@@ -332,47 +339,33 @@ export function getOrder(orderId) {
   return getState().orders.find((o) => o.id === Number(orderId)) || null;
 }
 
-export function placeOrder({ tableId, items, note = "" }) {
-  const table = getTable(tableId);
-  if (!table) fail("Table not found.");
+export async function placeOrder({ tenantId, tableNumber, items, note = "" }) {
+  const table = getTableByNumber(tableNumber);
+  if (!table || !tenantId) fail("Table not found.");
   if (!items?.length) fail("Cart is empty.");
 
-  const lines = items.map((li) => {
-    const item = getItem(li.itemId);
-    if (!item) fail(`${li.name || "An item"} is no longer on the menu.`);
-    if (!item.available) fail(`${item.name} is currently unavailable.`);
-    return {
-      itemId: item.id,
-      name: item.name,
-      price: item.price,
-      veg: item.veg,
-      qty: Math.max(1, Number(li.qty) || 1),
-    };
+  const response = await fetch("/api/public/orders", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({
+      tenantId,
+      tableNumber: table.number,
+      items: items.map(({ itemId, qty }) => ({ itemId, qty })),
+      note: String(note).trim(),
+    }),
   });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) fail(result.error || "Could not place this order.");
 
-  const now = Date.now();
-  const id = Math.max(getState().nextOrderId, Date.now() * 1000 + Math.floor(Math.random() * 1000));
-  const order = {
-    id,
-    tableId: table.id,
-    tableNumber: table.number,
-    items: lines,
-    note: String(note).trim(),
-    subtotal: lines.reduce((sum, l) => sum + l.price * l.qty, 0),
-    status: "new",
-    paymentStatus: "pending",
-    paymentMethod: null,
-    createdAt: now,
-    updatedAt: now,
-    statusLog: [logEntry("new", now)],
-  };
-
-  commit((s) => ({
-    ...s,
-    orders: [...s.orders, order],
-    nextOrderId: s.nextOrderId + 1,
-    tables: s.tables.map((t) =>
-      t.id === tableId ? { ...t, claimed: true } : t
+  const order = result.order;
+  setStateLocally((state) => ({
+    ...state,
+    orders: state.orders.some((entry) => entry.id === order.id)
+      ? state.orders
+      : [...state.orders, order],
+    nextOrderId: Math.max(state.nextOrderId, Number(order.id) + 1),
+    tables: state.tables.map((entry) =>
+      entry.id === order.tableId ? { ...entry, claimed: true } : entry
     ),
   }));
   return order;

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useStore } from "../../services/store.js";
 import { placeOrder } from "../../services/api.js";
 
@@ -9,11 +9,11 @@ export function useCart() {
   return useContext(CartContext);
 }
 
-const cartKey = (tableId) => `socialcafe.cart.${tableId}`;
+const cartKey = (tenantId, tableId) => `yourbite.cart.${tenantId}.${tableId}`;
 
-function loadCart(tableId) {
+function loadCart(tenantId, tableId) {
   try {
-    const raw = localStorage.getItem(cartKey(tableId));
+    const raw = localStorage.getItem(cartKey(tenantId, tableId));
     if (raw) return JSON.parse(raw);
   } catch {
     /* ignore */
@@ -24,30 +24,37 @@ function loadCart(tableId) {
 /** Provides cart state + table identity for the customer QR flow. */
 export function CartProvider({ children }) {
   const { tableId: tableParam } = useParams();
+  const [searchParams] = useSearchParams();
   const state = useStore();
+  const requestedTenantId = searchParams.get("tenant");
+  const tenantId = requestedTenantId && requestedTenantId === state.tenantId
+    ? requestedTenantId
+    : null;
 
   const table = useMemo(
-    () => state.tables.find((t) => t.number === tableParam || t.id === tableParam) || null,
-    [state.tables, tableParam]
+    () => tenantId
+      ? state.tables.find((t) => t.number === tableParam || t.id === tableParam) || null
+      : null,
+    [state.tables, tableParam, tenantId]
   );
 
-  const [cart, setCart] = useState(() => (table ? loadCart(table.id) : { items: [], note: "" }));
+  const [cart, setCart] = useState(() => (table && tenantId ? loadCart(tenantId, table.id) : { items: [], note: "" }));
 
   // Keep separate cart contents per QR route without claiming a table before an order.
   useEffect(() => {
     if (!table) return;
-    setCart(loadCart(table.id));
+    setCart(loadCart(tenantId, table.id));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [table?.id]);
+  }, [tenantId, table?.id]);
 
   useEffect(() => {
     if (!table) return;
     try {
-      localStorage.setItem(cartKey(table.id), JSON.stringify(cart));
+      localStorage.setItem(cartKey(tenantId, table.id), JSON.stringify(cart));
     } catch {
       /* ignore */
     }
-  }, [cart, table]);
+  }, [cart, table, tenantId]);
 
   const add = useCallback((item) => {
     setCart((c) => {
@@ -81,15 +88,21 @@ export function CartProvider({ children }) {
   const subtotal = cart.items.reduce((sum, li) => sum + li.price * li.qty, 0);
   const count = cart.items.reduce((sum, li) => sum + li.qty, 0);
 
-  const place = useCallback(() => {
+  const place = useCallback(async () => {
     if (!table) throw new Error("Table not found.");
-    const order = placeOrder({ tableId: table.id, items: cart.items, note: cart.note });
+    const order = await placeOrder({
+      tenantId,
+      tableNumber: table.number,
+      items: cart.items,
+      note: cart.note,
+    });
     clear();
     return order;
-  }, [table, cart.items, cart.note, clear]);
+  }, [table, tenantId, cart.items, cart.note, clear]);
 
   const value = {
     table,
+    tenantId,
     tableParam,
     items: cart.items,
     note: cart.note,

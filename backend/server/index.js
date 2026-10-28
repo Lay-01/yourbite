@@ -22,11 +22,13 @@ function verifyPassword(password, storedHash, storedSalt) {
   }
 }
 
+let testUsersProvisioned = false;
+
 async function ensureAuthSchema(client) {
   await client.query(`
     create table if not exists public.owner_users (
       id text primary key,
-      tenant_id text not null default 'tenant_owner_1',
+      tenant_id text,
       email text not null unique,
       password_hash text not null,
       password_salt text not null,
@@ -40,12 +42,12 @@ async function ensureAuthSchema(client) {
       expires_at timestamptz not null
     );
 
-    alter table public.owner_users add column if not exists tenant_id text default 'tenant_owner_1';
-    alter table public.restaurant_settings add column if not exists tenant_id text default 'tenant_owner_1';
-    alter table public.menu_categories add column if not exists tenant_id text default 'tenant_owner_1';
-    alter table public.dining_tables add column if not exists tenant_id text default 'tenant_owner_1';
-    alter table public.menu_items add column if not exists tenant_id text default 'tenant_owner_1';
-    alter table public.orders add column if not exists tenant_id text default 'tenant_owner_1';
+    alter table public.owner_users add column if not exists tenant_id text;
+    alter table public.restaurant_settings add column if not exists tenant_id text;
+    alter table public.menu_categories add column if not exists tenant_id text;
+    alter table public.dining_tables add column if not exists tenant_id text;
+    alter table public.menu_items add column if not exists tenant_id text;
+    alter table public.orders add column if not exists tenant_id text;
   `);
 
   try {
@@ -63,21 +65,41 @@ async function ensureAuthSchema(client) {
     /* ignore */
   }
 
-  const ownersToSeed = [
-    { id: "usr_owner_1", tenantId: "tenant_owner_1", email: "laymankad02@gmail.com", pass: "bogus12345" },
-    { id: "usr_owner_2", tenantId: "tenant_owner_2", email: "the.social.dev12@gmail.com", pass: "bogus212345" },
-    { id: "usr_owner_3", tenantId: "tenant_owner_3", email: "laypower123456789@gmail.com", pass: "bogus312345" },
-  ];
+  if (!testUsersProvisioned) {
+    const ownersToSeed = [
+      { id: "usr_owner_1", email: "laymankad02@gmail.com", pass: process.env.TEST_USER_1_PASSWORD },
+      { id: "usr_owner_2", email: "the.social.dev12@gmail.com", pass: process.env.TEST_USER_2_PASSWORD },
+      { id: "usr_owner_3", email: "laypower123456789@gmail.com", pass: process.env.TEST_USER_3_PASSWORD },
+    ];
 
-  for (const owner of ownersToSeed) {
-    const { hash, salt } = hashPassword(owner.pass);
-    await client.query(
-      `insert into public.owner_users (id, tenant_id, email, password_hash, password_salt)
-       values ($1, $2, $3, $4, $5)
-       on conflict (email) do update set tenant_id = excluded.tenant_id`,
-      [owner.id, owner.tenantId, owner.email.toLowerCase(), hash, salt]
-    );
+    for (const owner of ownersToSeed) {
+      if (!owner.pass) continue;
+      const { hash, salt } = hashPassword(owner.pass);
+      await client.query(
+        `insert into public.owner_users (id, tenant_id, email, password_hash, password_salt)
+         values ($1, $2, $3, $4, $5)
+         on conflict (email) do update set tenant_id = coalesce(owner_users.tenant_id, excluded.tenant_id),
+           password_hash = excluded.password_hash, password_salt = excluded.password_salt`,
+        [owner.id, `tenant_${owner.id}`, owner.email.toLowerCase(), hash, salt]
+      );
+    }
+    testUsersProvisioned = true;
   }
+}
+
+async function ensureUserTenant(client, userId) {
+  const result = await client.query(
+    `update public.owner_users
+     set tenant_id = case
+       when tenant_id is null or tenant_id = '' or tenant_id like 'tenant_owner_%'
+       then 'tenant_' || id
+       else tenant_id
+     end
+     where id = $1
+     returning id, email, tenant_id`,
+    [userId]
+  );
+  return result.rows[0] || null;
 }
 
 const app = express();
@@ -107,14 +129,8 @@ app.use((req, res, next) => {
   next();
 });
 
-const TENANT_NAMES = {
-  tenant_owner_1: "The Social Cafe",
-  tenant_owner_2: "Brew & Bite Bistro",
-  tenant_owner_3: "Artisan Coffee House",
-};
-
 async function ensureTenantSeeded(client, tenantId) {
-  const cafeName = TENANT_NAMES[tenantId] || "Your Restaurant";
+  const cafeName = "Your Restaurant";
   await client.query(`
     insert into public.restaurant_settings (tenant_id, cafe_name, tax_rate, opening_hours)
     values ($1, $2, 5, '9:00 AM – 11:00 PM')
@@ -167,20 +183,33 @@ async function ensureTenantSeeded(client, tenantId) {
   }
 }
 
-async function getTenantFromReq(req, client) {
+function tokenFromReq(req) {
   const authHeader = req.get("authorization") || "";
-  const token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : req.get("x-auth-token") || req.query.token;
-  const headerTenant = req.get("x-tenant-id") || req.query.tenant;
+  return authHeader.startsWith("Bearer ")
+    ? authHeader.substring(7)
+    : req.get("x-auth-token") || null;
+}
 
+async function getTenantFromReq(req, client, { allowPublic = false } = {}) {
+  const token = tokenFromReq(req);
   if (token) {
-    const res = await client.query(
-      `select u.tenant_id from public.owner_sessions s join public.owner_users u on u.id = s.user_id where s.token = $1 and s.expires_at > now()`,
+    const result = await client.query(
+      `select u.id, u.tenant_id from public.owner_sessions s
+       join public.owner_users u on u.id = s.user_id
+       where s.token = $1 and s.expires_at > now()`,
       [token]
     );
-    if (res.rows[0]?.tenant_id) return res.rows[0].tenant_id;
+    return result.rows[0] ? { ...result.rows[0], authenticated: true } : null;
   }
-  if (headerTenant) return headerTenant;
-  return "tenant_owner_1";
+
+  if (!allowPublic) return null;
+  const tenantId = String(req.body?.tenantId || req.query.tenant || "");
+  if (!tenantId) return null;
+  const result = await client.query(
+    "select id, tenant_id from public.owner_users where tenant_id = $1 limit 1",
+    [tenantId]
+  );
+  return result.rows[0] ? { ...result.rows[0], authenticated: false } : null;
 }
 
 const toMillis = (value) => (value ? new Date(value).getTime() : null);
@@ -221,6 +250,7 @@ async function loadSnapshot(client, tenantId) {
 
   const orders = ordersResult.rows.map((order) => ({
     id: Number(order.id),
+    tenantId,
     tableId: order.table_id,
     tableNumber: order.table_number,
     items: linesByOrder.get(Number(order.id)) || [],
@@ -242,12 +272,13 @@ async function loadSnapshot(client, tenantId) {
     tenantId,
     seededAt: null,
     settings: {
-      cafeName: row?.cafe_name || TENANT_NAMES[tenantId] || "Your Restaurant",
+      cafeName: row?.cafe_name || "Your Restaurant",
       taxRate: Number(row?.tax_rate || 5),
       openingHours: row?.opening_hours || "9:00 AM – 11:00 PM",
     },
     categories: categoriesResult.rows.map((category) => ({
       id: category.id,
+      tenantId,
       name: category.name,
       order: Number(category.sort_order),
     })),
@@ -262,6 +293,7 @@ tables: tablesResult.rows.map((table) => ({
      })),
     items: itemsResult.rows.map((item) => ({
       id: item.id,
+      tenantId,
       name: item.name,
       description: item.description,
       categoryId: item.category_id,
@@ -281,6 +313,8 @@ tables: tablesResult.rows.map((table) => ({
 async function persistChanges(changes, tenantId, client) {
   await client.query("begin");
   try {
+    await client.query("select set_config('app.tenant_id', $1, true)", [tenantId]);
+    await ensureTenantSeeded(client, tenantId);
     if (changes.settings) {
       await client.query(`insert into public.restaurant_settings (tenant_id, cafe_name, tax_rate, opening_hours)
         values ($1, $2, $3, $4)
@@ -382,12 +416,16 @@ app.get("/api/health", async (_req, res) => {
 app.get("/api/bootstrap", async (req, res) => {
   const client = await pool.connect();
   try {
-    const tenantId = await getTenantFromReq(req, client);
     await ensureAuthSchema(client);
-    await ensureTenantSeeded(client, tenantId);
+    const context = await getTenantFromReq(req, client, { allowPublic: true });
+    if (!context) {
+      return res.status(401).json({ error: "Authentication or a valid public cafe link is required." });
+    }
 
-    await client.query("begin isolation level repeatable read read only");
-    const snapshot = await loadSnapshot(client, tenantId);
+    await client.query("begin isolation level repeatable read");
+    await client.query("select set_config('app.tenant_id', $1, true)", [context.tenant_id]);
+    await ensureTenantSeeded(client, context.tenant_id);
+    const snapshot = await loadSnapshot(client, context.tenant_id);
     await client.query("commit");
     res.json(snapshot);
   } catch (error) {
@@ -399,17 +437,143 @@ app.get("/api/bootstrap", async (req, res) => {
   }
 });
 
+app.post("/api/public/orders", async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await ensureAuthSchema(client);
+    const context = await getTenantFromReq(req, client, { allowPublic: true });
+    if (!context) {
+      return res.status(400).json({ error: "A valid cafe link is required to place an order." });
+    }
+
+    const tableNumber = String(req.body?.tableNumber || "").trim();
+    const items = req.body?.items;
+    const note = String(req.body?.note || "").trim();
+    if (!tableNumber || !Array.isArray(items) || items.length === 0 || items.length > 30) {
+      return res.status(400).json({ error: "A table and at least one menu item are required." });
+    }
+    if (note.length > 500) {
+      return res.status(400).json({ error: "Order notes cannot exceed 500 characters." });
+    }
+
+    const requestedItems = items.map((item) => ({
+      itemId: String(item?.itemId || ""),
+      qty: Number(item?.qty),
+    }));
+    if (requestedItems.some((item) => !item.itemId || !Number.isInteger(item.qty) || item.qty < 1 || item.qty > 99)
+      || new Set(requestedItems.map((item) => item.itemId)).size !== requestedItems.length) {
+      return res.status(400).json({ error: "The order contains invalid menu items or quantities." });
+    }
+
+    await client.query("begin");
+    await client.query("select set_config('app.tenant_id', $1, true)", [context.tenant_id]);
+    const tableResult = await client.query(
+      "select id, number from public.dining_tables where tenant_id = $1 and number = $2 and active = true",
+      [context.tenant_id, tableNumber]
+    );
+    const table = tableResult.rows[0];
+    if (!table) {
+      await client.query("rollback");
+      return res.status(404).json({ error: "Table not found." });
+    }
+
+    const itemIds = requestedItems.map((item) => item.itemId);
+    const menuResult = await client.query(
+      `select id, name, price, veg from public.menu_items
+       where tenant_id = $1 and id = any($2::text[]) and available = true`,
+      [context.tenant_id, itemIds]
+    );
+    if (menuResult.rowCount !== itemIds.length) {
+      await client.query("rollback");
+      return res.status(400).json({ error: "One or more menu items are unavailable." });
+    }
+
+    const menuById = new Map(menuResult.rows.map((item) => [item.id, item]));
+    const lines = requestedItems.map(({ itemId, qty }) => {
+      const item = menuById.get(itemId);
+      return {
+        itemId: item.id,
+        name: item.name,
+        price: Number(item.price),
+        qty,
+        veg: item.veg,
+      };
+    });
+    const subtotal = lines.reduce((sum, item) => sum + item.price * item.qty, 0);
+    const now = new Date();
+    const orderResult = await client.query(
+      `insert into public.orders
+       (tenant_id, table_id, table_number, note, subtotal, status, payment_status, created_at, updated_at)
+       values ($1, $2, $3, $4, $5, 'new', 'pending', $6, $6)
+       returning id`,
+      [context.tenant_id, table.id, table.number, note, subtotal, now]
+    );
+    const orderId = Number(orderResult.rows[0].id);
+
+    for (const [index, line] of lines.entries()) {
+      await client.query(
+        `insert into public.order_items (order_id, line_number, item_id, name, price, qty, veg)
+         values ($1, $2, $3, $4, $5, $6, $7)`,
+        [orderId, index + 1, line.itemId, line.name, line.price, line.qty, line.veg]
+      );
+    }
+    await client.query(
+      `insert into public.order_status_events (order_id, sequence, status, label, created_at)
+       values ($1, 1, 'new', 'New', $2)`,
+      [orderId, now]
+    );
+    await client.query(
+      `insert into public.payments (order_id, amount, status, created_at)
+       values ($1, $2, 'pending', $3)`,
+      [orderId, subtotal, now]
+    );
+    await client.query(
+      "update public.dining_tables set claimed = true where id = $1 and tenant_id = $2",
+      [table.id, context.tenant_id]
+    );
+    await client.query("commit");
+
+    res.status(201).json({
+      ok: true,
+      order: {
+        id: orderId,
+        tenantId: context.tenant_id,
+        tableId: table.id,
+        tableNumber: table.number,
+        items: lines,
+        note,
+        subtotal,
+        status: "new",
+        paymentStatus: "pending",
+        paymentMethod: null,
+        createdAt: now.getTime(),
+        updatedAt: now.getTime(),
+        paidAt: null,
+        statusLog: [{ status: "new", label: "New", at: now.getTime() }],
+      },
+    });
+  } catch (error) {
+    await client.query("rollback").catch(() => {});
+    console.error("Public order failed:", error.message);
+    res.status(500).json({ error: "Could not place this order." });
+  } finally {
+    client.release();
+  }
+});
+
 app.post("/api/changes", async (req, res) => {
   if (!req.body || typeof req.body !== "object") {
     return res.status(400).json({ error: "Invalid change set." });
   }
   const client = await pool.connect();
   try {
-    const tenantId = await getTenantFromReq(req, client);
     await ensureAuthSchema(client);
-    await ensureTenantSeeded(client, tenantId);
-    await persistChanges(req.body, tenantId, client);
-    res.json({ ok: true, tenantId });
+    const context = await getTenantFromReq(req, client);
+    if (!context?.authenticated) {
+      return res.status(401).json({ error: "Authentication is required." });
+    }
+    await persistChanges(req.body, context.tenant_id, client);
+    res.json({ ok: true, tenantId: context.tenant_id });
   } catch (error) {
     console.error("Database change failed:", error.message);
     res.status(400).json({ error: error.message });
@@ -437,10 +601,11 @@ app.post("/api/auth/login", async (req, res) => {
       [cleanEmail]
     );
 
-    const user = userResult.rows[0];
-    if (!user || !verifyPassword(password, user.password_hash, user.password_salt)) {
+    const storedUser = userResult.rows[0];
+    if (!storedUser || !verifyPassword(password, storedUser.password_hash, storedUser.password_salt)) {
       return res.status(401).json({ error: "Invalid email or password." });
     }
+    const user = await ensureUserTenant(client, storedUser.id);
 
     const token = crypto.randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
@@ -486,7 +651,8 @@ app.get("/api/auth/me", async (req, res) => {
       return res.status(401).json({ error: "Invalid or expired session token." });
     }
 
-    res.json({ ok: true, user: { id: session.id, email: session.email, tenantId: session.tenant_id } });
+    const user = await ensureUserTenant(client, session.id);
+    res.json({ ok: true, user: { id: user.id, email: user.email, tenantId: user.tenant_id } });
   } catch (error) {
     res.status(500).json({ error: error.message });
   } finally {

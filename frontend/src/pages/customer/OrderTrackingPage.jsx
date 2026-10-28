@@ -119,7 +119,7 @@ export default function OrderTrackingPage() {
       </section>
 
       <div className="success-actions">
-        <Link className="btn btn-soft btn-block" to={`/menu/table/${order.tableNumber}`}>
+        <Link className="btn btn-soft btn-block" to={`/menu/table/${order.tableNumber}?tenant=${encodeURIComponent(params.get("tenant") || state.tenantId)}`}>
           <Icon name="arrowLeft" size={15} /> Order more
         </Link>
       </div>
