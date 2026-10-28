@@ -62,18 +62,12 @@ jobs:
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
 
-      - name: Pull Vercel environment
-        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
-
-      - name: Build for Vercel
-        run: vercel build --prod --token="$VERCEL_TOKEN"
-
       - name: Deploy to Vercel
         id: deploy
         shell: bash
         run: |
           set -euo pipefail
-          url="$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")"
+          url="$(vercel deploy --prod --yes --token="$VERCEL_TOKEN")"
           echo "deployment_url=${url##*$'\n'}" >> "$GITHUB_OUTPUT"
 
       - name: Deployment URL
