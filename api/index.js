@@ -63,17 +63,21 @@ async function ensureAuthSchema(client) {
   }
 
   const ownersToSeed = [
-    { id: "usr_owner_1", tenantId: "tenant_owner_1", email: "laymankad02@gmail.com", pass: "bogus12345" },
-    { id: "usr_owner_2", tenantId: "tenant_owner_2", email: "the.social.dev12@gmail.com", pass: "bogus212345" },
-    { id: "usr_owner_3", tenantId: "tenant_owner_3", email: "laypower123456789@gmail.com", pass: "bogus312345" },
-  ];
+    { id: "usr_owner_1", tenantId: "tenant_owner_1", email: "laymankad02@gmail.com", pass: process.env.TEST_USER_1_PASSWORD },
+    { id: "usr_owner_2", tenantId: "tenant_owner_2", email: "the.social.dev12@gmail.com", pass: process.env.TEST_USER_2_PASSWORD },
+    { id: "usr_owner_3", tenantId: "tenant_owner_3", email: "laypower123456789@gmail.com", pass: process.env.TEST_USER_3_PASSWORD },
+  ].filter((owner) => owner.pass);
 
   for (const owner of ownersToSeed) {
-    const { hash, salt } = hashPassword(owner.pass);
+    const { hash, salt } = hashPassword(owner.pass.trim());
     await client.query(
       `insert into public.owner_users (id, tenant_id, email, password_hash, password_salt)
        values ($1, $2, $3, $4, $5)
-       on conflict (email) do update set tenant_id = excluded.tenant_id`,
+       on conflict (email) do update set
+         tenant_id = excluded.tenant_id,
+         password_hash = excluded.password_hash,
+         password_salt = excluded.password_salt,
+         updated_at = now()`,
       [owner.id, owner.tenantId, owner.email.toLowerCase(), hash, salt]
     );
   }
